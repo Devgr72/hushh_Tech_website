@@ -1,6 +1,6 @@
 // cloud-run/email-template-api/emails/SalesNotification.js
 // Gmail-safe: NO Tailwind, NO JS. Table-based + inline styles.
-// Plus Jakarta Sans font with Arial fallback for Gmail compatibility.
+// Gmail-safe font stack: Google Sans, Roboto, Trebuchet MS with Arial fallback.
 
 const escapeHtml = (val = "") =>
   String(val)
@@ -34,9 +34,9 @@ export function SalesNotification(input = {}) {
     gray300: "#d1d5db",
   };
 
-  // Font stack - Gmail-safe: Plus Jakarta Sans with Google Sans/Roboto fallbacks
-  // Gmail doesn't support webfonts, so we use Google Sans/Roboto as fallbacks
-  const fontFamily = "'Plus Jakarta Sans','Google Sans',Roboto,Arial,Helvetica,sans-serif";
+  // Font stack - Gmail-safe: Google Sans, Roboto, Trebuchet MS with Arial fallback
+  // Gmail doesn't support custom webfonts, so we use system fonts that Gmail already has
+  const fontFamily = "'Google Sans','Roboto','Trebuchet MS',Arial,Helvetica,sans-serif";
 
   // ---- URLs ----
   const logoUrl = escapeHtml(d.logoUrl ?? "https://www.hushhtech.com/images/hushh-logo-email.png");
@@ -162,35 +162,7 @@ export function SalesNotification(input = {}) {
       body, table, td { font-family: Arial, Helvetica, sans-serif !important; }
     </style>
     <![endif]-->
-    <style>
-      /* Litmus-recommended @font-face method for non-Gmail clients */
-      @media screen {
-        @font-face {
-          font-family: 'Plus Jakarta Sans';
-          font-style: normal;
-          font-weight: 400;
-          src: url(https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_qU79TR_V.woff2) format('woff2');
-        }
-        @font-face {
-          font-family: 'Plus Jakarta Sans';
-          font-style: normal;
-          font-weight: 600;
-          src: url(https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KUn9TR_V.woff2) format('woff2');
-        }
-        @font-face {
-          font-family: 'Plus Jakarta Sans';
-          font-style: normal;
-          font-weight: 700;
-          src: url(https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_EEn9TR_V.woff2) format('woff2');
-        }
-        @font-face {
-          font-family: 'Plus Jakarta Sans';
-          font-style: normal;
-          font-weight: 800;
-          src: url(https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_d0n9TR_V.woff2) format('woff2');
-        }
-      }
-    </style>
+    <!-- Gmail-safe: No custom @font-face needed, using system fonts -->
   </head>
   <body style="margin:0;padding:0;background-color:${C.bg};font-family:${fontFamily};-webkit-font-smoothing:antialiased;">
     <div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
