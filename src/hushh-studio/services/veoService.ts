@@ -1,9 +1,10 @@
 /**
  * Hushh Studio - Veo 3.1 API Service
- * Handles video generation using Google's Veo 3.1 model
+ * Handles video generation using Google's Veo 3.1 model via Vertex AI
+ * 
+ * Uses Supabase Edge Function proxy for GCP paid billing access
  */
 
-import { GoogleGenAI } from '@google/genai';
 import {
   VideoSettings,
   GeneratedVideo,
@@ -11,23 +12,32 @@ import {
   MAX_POLLING_ATTEMPTS,
 } from '../types';
 
+// Supabase Edge Function URL
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const VEO_ENDPOINT = `${SUPABASE_URL}/functions/v1/veo-generate-video`;
+
 // Polling interval in milliseconds
-const POLLING_INTERVAL = 10000; // 10 seconds as per API docs
+const POLLING_INTERVAL = 10000; // 10 seconds
+
+interface VeoApiResponse {
+  success: boolean;
+  operationName?: string;
+  done?: boolean;
+  videoUrl?: string;
+  error?: string;
+}
 
 /**
- * VeoService - Handles all Veo 3.1 API operations
+ * VeoService - Handles all Veo 3.1 API operations via Edge Function
  */
 export class VeoService {
-  private ai: GoogleGenAI;
   private isInitialized: boolean = false;
 
   constructor() {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (!apiKey) {
-      console.error('VITE_GEMINI_API_KEY not found in environment variables');
+    this.isInitialized = !!SUPABASE_URL;
+    if (!this.isInitialized) {
+      console.error('VITE_SUPABASE_URL not found in environment variables');
     }
-    this.ai = new GoogleGenAI({ apiKey });
-    this.isInitialized = !!apiKey;
   }
 
   /**
@@ -35,6 +45,26 @@ export class VeoService {
    */
   public isReady(): boolean {
     return this.isInitialized;
+  }
+
+  /**
+   * Call the Veo Edge Function
+   */
+  private async callVeoApi(body: Record<string, unknown>): Promise<VeoApiResponse> {
+    const response = await fetch(VEO_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
   /**
@@ -46,7 +76,7 @@ export class VeoService {
     onProgress: (progress: GenerationProgress) => void
   ): Promise<GeneratedVideo> {
     if (!this.isInitialized) {
-      throw new Error('VeoService not initialized. Check API key.');
+      throw new Error('VeoService not initialized. Check Supabase URL.');
     }
 
     onProgress({
@@ -57,15 +87,18 @@ export class VeoService {
     });
 
     try {
-      // Start the video generation
-      let operation = await this.ai.models.generateVideos({
-        model: 'veo-3.1-generate-preview',
+      // Start the video generation via Edge Function
+      const startResponse = await this.callVeoApi({
+        action: 'generate',
         prompt: prompt,
-        config: {
-          aspectRatio: settings.aspectRatio,
-          resolution: settings.resolution,
-        },
+        aspectRatio: settings.aspectRatio,
       });
+
+      if (!startResponse.success || !startResponse.operationName) {
+        throw new Error(startResponse.error || 'Failed to start video generation');
+      }
+
+      const operationName = startResponse.operationName;
 
       onProgress({
         status: 'polling',
@@ -77,7 +110,7 @@ export class VeoService {
 
       // Poll for completion
       let pollingAttempts = 0;
-      while (!operation.done && pollingAttempts < MAX_POLLING_ATTEMPTS) {
+      while (pollingAttempts < MAX_POLLING_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL));
         pollingAttempts++;
 
@@ -94,50 +127,39 @@ export class VeoService {
         });
 
         // Check operation status
-        operation = await this.ai.operations.getVideosOperation({
-          operation: operation,
+        const pollResponse = await this.callVeoApi({
+          action: 'poll',
+          operationName: operationName,
         });
+
+        if (pollResponse.error) {
+          throw new Error(pollResponse.error);
+        }
+
+        if (pollResponse.done) {
+          if (!pollResponse.videoUrl) {
+            throw new Error('No video URL returned');
+          }
+
+          onProgress({
+            status: 'completed',
+            progress: 100,
+            message: 'Video ready!',
+            pollingAttempts,
+          });
+
+          return {
+            id: crypto.randomUUID(),
+            videoUrl: pollResponse.videoUrl,
+            prompt,
+            settings,
+            createdAt: new Date(),
+            duration: settings.duration,
+          };
+        }
       }
 
-      if (!operation.done) {
-        throw new Error('Video generation timed out. Please try again.');
-      }
-
-      if ((operation as any).error) {
-        throw new Error((operation as any).error.message || 'Video generation failed');
-      }
-
-      onProgress({
-        status: 'completed',
-        progress: 95,
-        message: 'Preparing video...',
-        pollingAttempts,
-      });
-
-      // Extract video URL
-      const generatedVideos = operation.response?.generatedVideos;
-      if (!generatedVideos || generatedVideos.length === 0) {
-        throw new Error('No video was generated');
-      }
-
-      const videoFile = generatedVideos[0].video;
-      const videoUrl = await this.getVideoDownloadUrl(videoFile);
-
-      onProgress({
-        status: 'completed',
-        progress: 100,
-        message: 'Video ready!',
-        pollingAttempts,
-      });
-
-      return {
-        id: crypto.randomUUID(),
-        videoUrl,
-        prompt,
-        settings,
-        createdAt: new Date(),
-        duration: settings.duration,
-      };
+      throw new Error('Video generation timed out. Please try again.');
     } catch (error) {
       console.error('Video generation error:', error);
       onProgress({
@@ -152,6 +174,7 @@ export class VeoService {
 
   /**
    * Generate video from image (Image-to-Video)
+   * Note: Image upload requires additional implementation
    */
   async generateVideoFromImage(
     prompt: string,
@@ -160,7 +183,7 @@ export class VeoService {
     onProgress: (progress: GenerationProgress) => void
   ): Promise<GeneratedVideo> {
     if (!this.isInitialized) {
-      throw new Error('VeoService not initialized. Check API key.');
+      throw new Error('VeoService not initialized. Check Supabase URL.');
     }
 
     onProgress({
@@ -171,22 +194,19 @@ export class VeoService {
     });
 
     try {
-      // Upload the image first
-      const imageFile = await this.ai.files.upload({
-        file: new Blob([Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))], { type: 'image/jpeg' }),
-        config: { mimeType: 'image/jpeg' }
+      // Start video generation with image
+      const startResponse = await this.callVeoApi({
+        action: 'generate',
+        prompt: prompt,
+        aspectRatio: settings.aspectRatio,
+        imageBase64: imageBase64, // Edge function will handle image upload
       });
 
-      // Start video generation with image
-      let operation = await this.ai.models.generateVideos({
-        model: 'veo-3.1-generate-preview',
-        prompt: prompt,
-        image: imageFile,
-        config: {
-          aspectRatio: settings.aspectRatio,
-          resolution: settings.resolution,
-        },
-      });
+      if (!startResponse.success || !startResponse.operationName) {
+        throw new Error(startResponse.error || 'Failed to start image-to-video generation');
+      }
+
+      const operationName = startResponse.operationName;
 
       onProgress({
         status: 'polling',
@@ -198,7 +218,7 @@ export class VeoService {
 
       // Poll for completion
       let pollingAttempts = 0;
-      while (!operation.done && pollingAttempts < MAX_POLLING_ATTEMPTS) {
+      while (pollingAttempts < MAX_POLLING_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL));
         pollingAttempts++;
 
@@ -212,42 +232,39 @@ export class VeoService {
           estimatedTimeRemaining: Math.max(0, (MAX_POLLING_ATTEMPTS - pollingAttempts) * 10),
         });
 
-        operation = await this.ai.operations.getVideosOperation({
-          operation: operation,
+        const pollResponse = await this.callVeoApi({
+          action: 'poll',
+          operationName: operationName,
         });
+
+        if (pollResponse.error) {
+          throw new Error(pollResponse.error);
+        }
+
+        if (pollResponse.done) {
+          if (!pollResponse.videoUrl) {
+            throw new Error('No video URL returned');
+          }
+
+          onProgress({
+            status: 'completed',
+            progress: 100,
+            message: 'Animation complete!',
+            pollingAttempts,
+          });
+
+          return {
+            id: crypto.randomUUID(),
+            videoUrl: pollResponse.videoUrl,
+            prompt,
+            settings,
+            createdAt: new Date(),
+            duration: settings.duration,
+          };
+        }
       }
 
-      if (!operation.done) {
-        throw new Error('Image-to-video generation timed out.');
-      }
-
-      if ((operation as any).error) {
-        throw new Error((operation as any).error.message || 'Image-to-video generation failed');
-      }
-
-      const generatedVideos = operation.response?.generatedVideos;
-      if (!generatedVideos || generatedVideos.length === 0) {
-        throw new Error('No video was generated from image');
-      }
-
-      const videoFile = generatedVideos[0].video;
-      const videoUrl = await this.getVideoDownloadUrl(videoFile);
-
-      onProgress({
-        status: 'completed',
-        progress: 100,
-        message: 'Animation complete!',
-        pollingAttempts,
-      });
-
-      return {
-        id: crypto.randomUUID(),
-        videoUrl,
-        prompt,
-        settings,
-        createdAt: new Date(),
-        duration: settings.duration,
-      };
+      throw new Error('Image-to-video generation timed out.');
     } catch (error) {
       console.error('Image-to-video error:', error);
       onProgress({
@@ -270,7 +287,7 @@ export class VeoService {
     onProgress: (progress: GenerationProgress) => void
   ): Promise<GeneratedVideo> {
     if (!this.isInitialized) {
-      throw new Error('VeoService not initialized. Check API key.');
+      throw new Error('VeoService not initialized. Check Supabase URL.');
     }
 
     onProgress({
@@ -281,26 +298,19 @@ export class VeoService {
     });
 
     try {
-      // Fetch the video and upload it
-      const videoBlob = await fetch(videoUrl).then(r => r.blob());
-      const videoFile = await this.ai.files.upload({
-        file: videoBlob,
-        config: { mimeType: 'video/mp4' }
-      });
-
-      // Wait for file to be processed
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
       // Start video extension
-      let operation = await this.ai.models.generateVideos({
-        model: 'veo-3.1-generate-preview',
+      const startResponse = await this.callVeoApi({
+        action: 'generate',
         prompt: prompt,
-        video: videoFile,
-        config: {
-          aspectRatio: settings.aspectRatio,
-          resolution: settings.resolution,
-        },
+        aspectRatio: settings.aspectRatio,
+        videoUrl: videoUrl, // Edge function will handle video download/upload
       });
+
+      if (!startResponse.success || !startResponse.operationName) {
+        throw new Error(startResponse.error || 'Failed to start video extension');
+      }
+
+      const operationName = startResponse.operationName;
 
       onProgress({
         status: 'polling',
@@ -312,7 +322,7 @@ export class VeoService {
 
       // Poll for completion
       let pollingAttempts = 0;
-      while (!operation.done && pollingAttempts < MAX_POLLING_ATTEMPTS) {
+      while (pollingAttempts < MAX_POLLING_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL));
         pollingAttempts++;
 
@@ -325,42 +335,39 @@ export class VeoService {
           pollingAttempts,
         });
 
-        operation = await this.ai.operations.getVideosOperation({
-          operation: operation,
+        const pollResponse = await this.callVeoApi({
+          action: 'poll',
+          operationName: operationName,
         });
+
+        if (pollResponse.error) {
+          throw new Error(pollResponse.error);
+        }
+
+        if (pollResponse.done) {
+          if (!pollResponse.videoUrl) {
+            throw new Error('No video URL returned');
+          }
+
+          onProgress({
+            status: 'completed',
+            progress: 100,
+            message: 'Video extended!',
+            pollingAttempts,
+          });
+
+          return {
+            id: crypto.randomUUID(),
+            videoUrl: pollResponse.videoUrl,
+            prompt,
+            settings,
+            createdAt: new Date(),
+            duration: settings.duration + 7, // Extended by 7 seconds
+          };
+        }
       }
 
-      if (!operation.done) {
-        throw new Error('Video extension timed out.');
-      }
-
-      if ((operation as any).error) {
-        throw new Error((operation as any).error.message || 'Video extension failed');
-      }
-
-      const generatedVideos = operation.response?.generatedVideos;
-      if (!generatedVideos || generatedVideos.length === 0) {
-        throw new Error('No extended video was generated');
-      }
-
-      const extendedVideoFile = generatedVideos[0].video;
-      const newVideoUrl = await this.getVideoDownloadUrl(extendedVideoFile);
-
-      onProgress({
-        status: 'completed',
-        progress: 100,
-        message: 'Video extended!',
-        pollingAttempts,
-      });
-
-      return {
-        id: crypto.randomUUID(),
-        videoUrl: newVideoUrl,
-        prompt,
-        settings,
-        createdAt: new Date(),
-        duration: settings.duration + 7, // Extended by 7 seconds
-      };
+      throw new Error('Video extension timed out.');
     } catch (error) {
       console.error('Video extension error:', error);
       onProgress({
@@ -374,40 +381,12 @@ export class VeoService {
   }
 
   /**
-   * Get downloadable URL for a generated video file
-   */
-  private async getVideoDownloadUrl(videoFile: any): Promise<string> {
-    try {
-      // If the video file has a URI, use it directly
-      if (videoFile.uri) {
-        return videoFile.uri;
-      }
-
-      // Fallback: if there's a direct URL
-      if (videoFile.url) {
-        return videoFile.url;
-      }
-
-      // Check for name property which might contain download info
-      if (videoFile.name) {
-        return `https://generativelanguage.googleapis.com/v1/${videoFile.name}:download`;
-      }
-
-      throw new Error('Could not extract video URL');
-    } catch (error) {
-      console.error('Error getting video URL:', error);
-      // Return the URI as fallback
-      return videoFile.uri || videoFile.url || '';
-    }
-  }
-
-  /**
    * Cancel an ongoing operation (if supported)
    */
   async cancelOperation(operationName: string): Promise<void> {
     try {
-      // Note: Cancellation support depends on API implementation
       console.log('Attempting to cancel operation:', operationName);
+      // Note: Cancellation support depends on API implementation
     } catch (error) {
       console.error('Failed to cancel operation:', error);
     }

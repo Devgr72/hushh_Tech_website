@@ -135,12 +135,21 @@ if [ "$HTTP_CODE" -eq 200 ]; then
         MAX_POLLS=18  # 18 * 10s = 3 minutes max
         POLL_COUNT=0
         
+        # Extract the operation ID from the full operation name
+        # Format: projects/{project}/locations/{location}/publishers/google/models/{model}/operations/{op_id}
+        OPERATION_ID=$(echo "$OPERATION_NAME" | grep -oE 'operations/[^/]+$' | cut -d'/' -f2)
+        
+        # Standard Vertex AI operations endpoint
+        POLL_ENDPOINT="${BASE_URL}/projects/${PROJECT_ID}/locations/${LOCATION}/operations/${OPERATION_ID}"
+        echo -e "  Poll endpoint: ${POLL_ENDPOINT}"
+        echo ""
+        
         while [ $POLL_COUNT -lt $MAX_POLLS ]; do
             POLL_COUNT=$((POLL_COUNT + 1))
             
-            # Vertex AI operations endpoint
+            # Try both endpoints - first the standard operations endpoint
             POLL_RESPONSE=$(curl -s -w "\n%{http_code}" \
-                "${BASE_URL}/${OPERATION_NAME}" \
+                "${POLL_ENDPOINT}" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 -H "Content-Type: application/json")
             
