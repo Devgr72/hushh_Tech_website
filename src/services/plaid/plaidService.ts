@@ -53,39 +53,14 @@ export interface AssetReportPollResponse {
 }
 
 // =====================================================
-// Supabase Edge Function Base URL + Auth
+// API Base URL — Uses Vercel serverless functions (same origin)
 // =====================================================
 
-const SUPABASE_URL = 'https://ibsisfnjxeowvdtvgzff.supabase.co/functions/v1';
+const API_URL = '/api/plaid';
 
-/** Get the Supabase anon key from env */
-const getAnonKey = (): string => {
-  try {
-    // @ts-ignore - Vite env
-    return import.meta.env?.VITE_SUPABASE_ANON_KEY || '';
-  } catch {
-    return '';
-  }
-};
-
-/** Get the user's auth session token (required by Edge Functions that verify JWT) */
-const getUserAccessToken = async (): Promise<string> => {
-  try {
-    const config = (await import('../../resources/config/config')).default;
-    const supabase = config.supabaseClient;
-    if (!supabase) return getAnonKey();
-
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || getAnonKey();
-  } catch {
-    return getAnonKey();
-  }
-};
-
-/** Standard headers for all Supabase Edge Function calls */
-const getHeaders = (accessToken?: string): Record<string, string> => ({
+/** Standard headers for API calls */
+const getHeaders = (): Record<string, string> => ({
   'Content-Type': 'application/json',
-  'Authorization': `Bearer ${accessToken || getAnonKey()}`,
 });
 
 // =====================================================
@@ -100,10 +75,9 @@ export const createLinkToken = async (
   userId: string,
   userEmail?: string,
 ): Promise<PlaidLinkTokenResponse> => {
-  const token = await getUserAccessToken();
-  const response = await fetch(`${SUPABASE_URL}/create-link-token`, {
+  const response = await fetch(`${API_URL}/create-link-token`, {
     method: 'POST',
-    headers: getHeaders(token),
+    headers: getHeaders(),
     body: JSON.stringify({ userId, userEmail }),
   });
 
@@ -125,10 +99,9 @@ export const exchangeToken = async (
   institutionName?: string,
   institutionId?: string,
 ): Promise<PlaidExchangeResponse> => {
-  const token = await getUserAccessToken();
-  const response = await fetch(`${SUPABASE_URL}/exchange-public-token`, {
+  const response = await fetch(`${API_URL}/exchange-public-token`, {
     method: 'POST',
-    headers: getHeaders(token),
+    headers: getHeaders(),
     body: JSON.stringify({
       publicToken,
       userId,
@@ -154,10 +127,9 @@ export const fetchBalance = async (
   userId: string,
 ): Promise<ProductResult> => {
   try {
-    const userToken = await getUserAccessToken();
-    const response = await fetch(`${SUPABASE_URL}/get-balance`, {
+    const response = await fetch(`${API_URL}/get-balance`, {
       method: 'POST',
-      headers: getHeaders(userToken),
+      headers: getHeaders(),
       body: JSON.stringify({ accessToken, userId }),
     });
 
@@ -186,10 +158,9 @@ export const fetchAssets = async (
   userId: string,
 ): Promise<ProductResult> => {
   try {
-    const userToken = await getUserAccessToken();
-    const response = await fetch(`${SUPABASE_URL}/asset-report-create`, {
+    const response = await fetch(`${API_URL}/asset-report-create`, {
       method: 'POST',
-      headers: getHeaders(userToken),
+      headers: getHeaders(),
       body: JSON.stringify({ accessToken, userId }),
     });
 
@@ -223,10 +194,9 @@ export const fetchInvestments = async (
   userId: string,
 ): Promise<ProductResult> => {
   try {
-    const userToken = await getUserAccessToken();
-    const response = await fetch(`${SUPABASE_URL}/investments-holdings`, {
+    const response = await fetch(`${API_URL}/investments-holdings`, {
       method: 'POST',
-      headers: getHeaders(userToken),
+      headers: getHeaders(),
       body: JSON.stringify({ accessToken, userId }),
     });
 
@@ -296,10 +266,9 @@ export const checkAssetReport = async (
   assetReportToken: string,
   userId: string,
 ): Promise<AssetReportPollResponse> => {
-  const userToken = await getUserAccessToken();
-  const response = await fetch(`${SUPABASE_URL}/asset-report-create`, {
+  const response = await fetch(`${API_URL}/asset-report-create`, {
     method: 'POST',
-    headers: getHeaders(userToken),
+    headers: getHeaders(),
     body: JSON.stringify({ assetReportToken, userId, action: 'get' }),
   });
 
