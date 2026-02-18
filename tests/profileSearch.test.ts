@@ -494,9 +494,20 @@ describe('transformApiResponse', () => {
 // Uses the Management API to verify table existence
 // ============================================================
 
-describe('Supabase Integration', () => {
-  const SUPABASE_API = 'https://api.supabase.com/v1/projects/ibsisfnjxeowvdtvgzff/database/query';
-  const SUPABASE_TOKEN = 'sbp_f4130e6a2c63461d2a4540e1f940b4d963cd1921';
+const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF || '';
+const SUPABASE_TOKEN =
+  process.env.SUPABASE_ACCESS_TOKEN ||
+  process.env.SUPABASE_MANAGEMENT_API_TOKEN ||
+  '';
+
+const SUPABASE_API = SUPABASE_PROJECT_REF
+  ? `https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query`
+  : '';
+
+const shouldRunSupabaseIntegration = Boolean(SUPABASE_API && SUPABASE_TOKEN);
+const describeSupabaseIntegration = shouldRunSupabaseIntegration ? describe : describe.skip;
+
+describeSupabaseIntegration('Supabase Integration', () => {
 
   // Test 31: Verify user_enriched_profiles table exists
   // SKIP: Migration not yet applied to test database

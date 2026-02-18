@@ -61,7 +61,7 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ report, isLoading }) => {
             Charts & Data
           </Heading>
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-            {report.image_urls.map((src, i) => (
+            {report.public_image_urls.map((src: string, i: number) => (
               <img
                 key={i}
                 src={src}
@@ -84,7 +84,7 @@ const ReportDetail: React.FC<ReportDetailProps> = ({ report, isLoading }) => {
             Related Videos
           </Heading>
           <SimpleGrid columns={{ base: 1, md: report.public_video_urls.length > 1 ? 2 : 1 }} spacing={4}>
-            {report.video_urls.map((src, i) => (
+            {report.public_video_urls.map((src: string, i: number) => (
               <AspectRatio key={i} ratio={16 / 9} borderRadius="md" overflow="hidden">
                 <video src={src} controls style={{ width: '100%', height: '100%' }} />
               </AspectRatio>

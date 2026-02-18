@@ -1,14 +1,23 @@
 // src/services/reportService.ts
 
+const REPORTS_SUPABASE_URL = import.meta.env.VITE_MARKET_SUPABASE_URL || "";
+const REPORTS_SUPABASE_ANON_KEY = import.meta.env.VITE_MARKET_SUPABASE_KEY || "";
+
 // Supabase storage buckets (public)
 export const STORAGE_BUCKETS = {
-  IMAGES: 'https://spmxyqxjqxcyywkapong.supabase.co/storage/v1/object/public/alohafundsreport-images',
-  VIDEOS: 'https://spmxyqxjqxcyywkapong.supabase.co/storage/v1/object/public/alohafundsreport-videos',
+  IMAGES: REPORTS_SUPABASE_URL
+    ? `${REPORTS_SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/alohafundsreport-images`
+    : "",
+  VIDEOS: REPORTS_SUPABASE_URL
+    ? `${REPORTS_SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/alohafundsreport-videos`
+    : "",
 };
 
 // Supabase REST API base URL & anon key
-const API_BASE = 'https://spmxyqxjqxcyywkapong.supabase.co/rest/v1';
-const API_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbXh5cXhqcXhjeXl3a2Fwb25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3MTYwNDIsImV4cCI6MjA2MDI5MjA0Mn0._C6lZcTubk2VuwDKC2uDOsiFFPaKRiEJSqBjtGpm99E';
+const API_BASE = REPORTS_SUPABASE_URL
+  ? `${REPORTS_SUPABASE_URL.replace(/\/$/, "")}/rest/v1`
+  : "";
+const API_KEY = REPORTS_SUPABASE_ANON_KEY;
 
 // Raw shape returned by Supabase
 interface RawReport {
@@ -56,6 +65,7 @@ function dateToFolder(name: string): string {
  * Fetch a single report by ID, then prepend full bucket URLs
  */
 export const getReportById = async (id: string): Promise<Report | null> => {
+  if (!API_BASE || !API_KEY) return null;
   const res = await fetch(
     `${API_BASE}/reports?id=eq.${id}&select=*`,
     {

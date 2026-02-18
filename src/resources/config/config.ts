@@ -9,17 +9,20 @@ interface Config {
 }
 
 const config: Config = {
-  SUPABASE_URL:
-    import.meta.env.VITE_SUPABASE_URL || "https://ibsisfnjxeowvdtvgzff.supabase.co",
-  SUPABASE_ANON_KEY:
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlic2lzZm5qeGVvd3ZkdHZnemZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NTk1NzgsImV4cCI6MjA4MDEzNTU3OH0.K16sO1R9L2WZGPueDP0mArs2eDYZc-TnIk2LApDw_fs",
+  SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL || "",
+  SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
   // Use platform-aware redirect URL for iOS Universal Links support
   redirect_url:
     import.meta.env.VITE_SUPABASE_REDIRECT_URL || getOAuthRedirectUrl(),
 };
 
 function createSupabaseClient() {
+  if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
+    console.warn(
+      "[Config] Missing VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY. Supabase client will be unavailable until env is configured."
+    );
+    return undefined;
+  }
   const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: true,

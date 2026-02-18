@@ -3,14 +3,29 @@
  * Run with: node src/scripts/testReportsApi.js
  */
 
-const API_BASE_URL = 'https://spmxyqxjqxcyywkapong.supabase.co/rest/v1';
-// Updated API key
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbXh5cXhqcXhjeXl3a2Fwb25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3MTYwNDIsImV4cCI6MjA2MDI5MjA0Mn0._C6lZcTubk2VuwDKC2uDOsiFFPaKRiEJSqBjtGpm99E';
+const REPORTS_SUPABASE_URL =
+  process.env.REPORTS_SUPABASE_URL ||
+  process.env.VITE_MARKET_SUPABASE_URL ||
+  '';
+
+const REPORTS_SUPABASE_ANON_KEY =
+  process.env.REPORTS_SUPABASE_ANON_KEY ||
+  process.env.VITE_MARKET_SUPABASE_KEY ||
+  '';
+
+if (!REPORTS_SUPABASE_URL || !REPORTS_SUPABASE_ANON_KEY) {
+  console.error('Missing REPORTS_SUPABASE_URL and/or REPORTS_SUPABASE_ANON_KEY.');
+  console.error('Refusing to run without explicit env configuration.');
+  process.exit(1);
+}
+
+const API_BASE_URL = `${REPORTS_SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
+const API_KEY = REPORTS_SUPABASE_ANON_KEY;
 
 // Storage bucket URLs for testing images and videos
 const STORAGE_BUCKETS = {
-  IMAGES: 'https://spmxyqxjqxcyywkapong.supabase.co/storage/v1/object/public/alohafundsreport-images',
-  VIDEOS: 'https://spmxyqxjqxcyywkapong.supabase.co/storage/v1/object/public/alohafundsreport-videos'
+  IMAGES: `${REPORTS_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/alohafundsreport-images`,
+  VIDEOS: `${REPORTS_SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/alohafundsreport-videos`
 };
 
 async function testApiConnection() {

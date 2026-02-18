@@ -419,7 +419,7 @@ const ProfilePage: React.FC = () => {
                 opacity: 0.7,
                 cursor: "not-allowed",
               }}
-              transition="all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+              style={{ transition: "all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" }}
               boxShadow="0 8px 24px rgba(43, 140, 238, 0.35)"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -459,7 +459,7 @@ const ProfilePage: React.FC = () => {
                 bg: "rgba(43, 140, 238, 0.1)",
                 transform: "scale(0.98)",
               }}
-              transition="all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+              style={{ transition: "all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" }}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
             >

@@ -4,12 +4,17 @@
 # 🍎 Apple Client Secret Generator (FIXED)
 # ==========================================
 
-# --- 1. CONFIGURATION (ENTER YOUR DETAILS HERE) ---
-# Update these 4 lines with your specific details:
-TEAM_ID="WVDK9JW99C"                   # Your Team ID
-KEY_ID="2822NMDJU5"                    # The Key ID from Apple
-CLIENT_ID="WVDK9JW99C.all-hushh-web-login"           # Your Service ID (e.g. com.hushh.webapp)
-KEY_FILE_PATH="./AuthKey_LK53NZBH4L.p8" # Exact filename of your .p8 file in this folder
+# --- 1. CONFIGURATION ---
+# SECURITY NOTE:
+# Do NOT commit private keys to this repository.
+# Place your `.p8` file in a private location like: ~/.private_keys/AuthKey_{KEY_ID}.p8
+#
+# Provide values via env vars before running:
+#   TEAM_ID=... KEY_ID=... CLIENT_ID=... KEY_FILE_PATH=... ./src/scripts/generate_apple_secret.sh
+TEAM_ID="${TEAM_ID:-}"
+KEY_ID="${KEY_ID:-}"
+CLIENT_ID="${CLIENT_ID:-}"
+KEY_FILE_PATH="${KEY_FILE_PATH:-$HOME/.private_keys/AuthKey_${KEY_ID}.p8}"
 
 # --- 2. SETUP & GENERATION ---
 
@@ -19,10 +24,17 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
+# Validate required inputs
+if [ -z "$TEAM_ID" ] || [ -z "$KEY_ID" ] || [ -z "$CLIENT_ID" ]; then
+    echo "Error: Missing required config."
+    echo "Provide TEAM_ID, KEY_ID, CLIENT_ID (and optionally KEY_FILE_PATH)."
+    exit 1
+fi
+
 # Check if .p8 file exists
 if [ ! -f "$KEY_FILE_PATH" ]; then
     echo "❌ Error: Key file not found at $KEY_FILE_PATH"
-    echo "   Make sure the file name in line 12 matches your actual file."
+    echo "   Set KEY_FILE_PATH to the location of your AuthKey_{KEY_ID}.p8 file."
     exit 1
 fi
 

@@ -6,15 +6,28 @@
 
 set -e
 
-# Configuration
-SUPABASE_ACCESS_TOKEN="sbp_4668a0419af677f2adaa5c5532304598c2bee496"
-PROJECT_REF="ibsisfnjxeowvdtvgzff"
-BUCKET_NAME="assets"
+# Configuration (do NOT hardcode secrets)
+SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
+PROJECT_REF="${SUPABASE_PROJECT_REF:-${PROJECT_REF:-}}"
+BUCKET_NAME="${BUCKET_NAME:-assets}"
+
+if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$PROJECT_REF" ]; then
+  echo "Missing SUPABASE_ACCESS_TOKEN and/or PROJECT_REF."
+  echo "Usage: SUPABASE_ACCESS_TOKEN=... PROJECT_REF=... $0 <file_path> <file_name>"
+  exit 1
+fi
+
 SUPABASE_URL="https://${PROJECT_REF}.supabase.co"
 
 # File to upload
-FILE_PATH="${1:-/Users/ankitkumarsingh/Downloads/Hushhogo-tDRfOnun.png}"
-FILE_NAME="${2:-hushh-logo.png}"
+FILE_PATH="${1:-}"
+FILE_NAME="${2:-}"
+
+if [ -z "$FILE_PATH" ] || [ -z "$FILE_NAME" ]; then
+  echo "Missing file path/name."
+  echo "Usage: SUPABASE_ACCESS_TOKEN=... PROJECT_REF=... $0 <file_path> <file_name>"
+  exit 1
+fi
 
 # Colors for output
 GREEN='\033[0;32m'

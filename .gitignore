@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+.env.*
+!.env*.example
 
 .contentlayer
 
@@ -27,3 +29,7 @@ dist-ssr
 *.sw?
 .vercel
 vertex-ai-key.json
+*.p8
+*.pem
+*.key
+*.tsbuildinfo

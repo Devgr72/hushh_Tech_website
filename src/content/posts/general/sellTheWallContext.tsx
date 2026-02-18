@@ -248,7 +248,7 @@ const SellTheWallContext = () => {
         <ListItem>• Markets are complex adaptive systems, not just numbers on a screen.</ListItem>
         <ListItem>• The key is understanding how liquidity cycles work, how human psychology impacts price discovery, and how AI-driven prediction models consistently extract profit.</ListItem>
         
-        <ListItem><strong>Free Cash Flow Machines > AI Overbuilders 💡</strong></ListItem>
+        <ListItem><strong>Free Cash Flow Machines {'>'} AI Overbuilders 💡</strong></ListItem>
         <ListItem>• Companies investing in AI at unsustainable levels (GOOGL, META) face margin compression.</ListItem>
         <ListItem>• Companies like AAPL, MSFT, NVDA, which balance CapEx and efficiency, outperform in risk-adjusted alpha terms.</ListItem>
         <ListItem>• “Sell The Wall” optimizes entry/exit points based on capital discipline metrics.</ListItem>
@@ -379,7 +379,7 @@ const SellTheWallContext = () => {
         <ListItem>• Markets are complex adaptive systems, not just numbers on a screen.</ListItem>
         <ListItem>• The key is understanding how liquidity cycles work, how human psychology impacts price discovery, and how AI-driven prediction models consistently extract profit.</ListItem>
         
-        <ListItem><strong>Free Cash Flow Machines > AI Overbuilders 💡</strong></ListItem>
+        <ListItem><strong>Free Cash Flow Machines {'>'} AI Overbuilders 💡</strong></ListItem>
         <ListItem>• Companies investing in AI at unsustainable levels (GOOGL, META) face margin compression.</ListItem>
         <ListItem>• Companies like AAPL, MSFT, NVDA, which balance CapEx and efficiency, outperform in risk-adjusted alpha terms.</ListItem>
         <ListItem>• “Sell The Wall” optimizes entry/exit points based on capital discipline metrics.</ListItem>

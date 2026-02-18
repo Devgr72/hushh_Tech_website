@@ -7,10 +7,24 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock environment variables
-const SUPABASE_URL = 'https://ibsisfnjxeowvdtvgzff.supabase.co';
-const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/nda-signed-notification`;
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlic2lzZm5qeGVvd3ZkdHZnemZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI4NjIwMDAsImV4cCI6MjA0ODQzODAwMH0.aqNwqVJnDJXcXEVhfXRXbFVhKNrPWk8QQH06sS0dExg';
+// Integration test config (live Supabase Edge Function)
+// These tests are skipped by default in CI/build unless env vars are provided.
+const SUPABASE_URL =
+  process.env.NDA_TEST_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  '';
+
+const SUPABASE_ANON_KEY =
+  process.env.NDA_TEST_SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  '';
+
+const FUNCTION_URL = SUPABASE_URL
+  ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/nda-signed-notification`
+  : '';
+
+const shouldRunIntegration = Boolean(FUNCTION_URL && SUPABASE_ANON_KEY);
+const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 // Test payload helper
 const createTestPayload = (overrides = {}) => ({
@@ -23,7 +37,7 @@ const createTestPayload = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('NDA Notification Edge Function', () => {
+describeIntegration('NDA Notification Edge Function', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

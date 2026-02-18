@@ -5,11 +5,18 @@ import config from '../../resources/config/config';
  * Provides complete Multi-Factor Authentication functionality
  */
 
+type MFAResult<T> = { data: T | null; error: Error | null };
+
+function toError(err: unknown): Error {
+    if (err instanceof Error) return err;
+    return new Error(typeof err === 'string' ? err : 'Unknown error');
+}
+
 /**
  * Enrolls a new MFA factor for the current user
  * @returns {Promise<{data: {id: string, totp: {qr_code: string, secret: string, uri: string}} | null, error: any}>}
  */
-export const enrollMFA = async () => {
+export const enrollMFA = async (): Promise<MFAResult<any>> => {
     try {
         if (!config.supabaseClient) throw new Error("Supabase client not initialized");
 
@@ -26,7 +33,7 @@ export const enrollMFA = async () => {
         return { data, error: null };
     } catch (error) {
         console.error('MFA enrollment exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -65,7 +72,7 @@ export const verifyMFAEnrollment = async (factorId: string, code: string) => {
         return { data: verifyData, error: null };
     } catch (error) {
         console.error('MFA verification exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -90,7 +97,7 @@ export const challengeMFA = async (factorId: string) => {
         return { data, error: null };
     } catch (error) {
         console.error('MFA challenge exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -119,7 +126,7 @@ export const verifyMFAChallenge = async (factorId: string, challengeId: string, 
         return { data, error: null };
     } catch (error) {
         console.error('MFA challenge verification exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -144,7 +151,7 @@ export const unenrollMFA = async (factorId: string) => {
         return { data, error: null };
     } catch (error) {
         console.error('MFA unenroll exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -166,7 +173,7 @@ export const getMFAFactors = async () => {
         return { data: data.all || [], error: null };
     } catch (error) {
         console.error('Get MFA factors exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 
@@ -188,7 +195,7 @@ export const getAssuranceLevel = async () => {
         return { data, error: null };
     } catch (error) {
         console.error('Get assurance level exception:', error);
-        return { data: null, error };
+        return { data: null, error: toError(error) };
     }
 };
 

@@ -33,13 +33,10 @@ const PINNED_SLUGS = [
   "general/sell-the-wall-featured",
 ];
 
-// Supabase REST API settings
-const ALOHA_FUNDS_API_BASE =
-  (import.meta as any).env?.VITE_MARKET_SUPABASE_URL ||
-  "https://spmxyqxjqxcyywkapong.supabase.co";
-const ALOHA_FUNDS_API_KEY =
-  (import.meta as any).env?.VITE_MARKET_SUPABASE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbXh5cXhqcXhjeXl3a2Fwb25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3MTYwNDIsImV4cCI6MjA2MDI5MjA0Mn0._C6lZcTubk2VuwDKC2uDOsiFFPaKRiEJSqBjtGpm99E";
+// Supabase REST API settings (Market Updates)
+// Configure via env to avoid committing keys.
+const ALOHA_FUNDS_API_BASE = import.meta.env.VITE_MARKET_SUPABASE_URL || "";
+const ALOHA_FUNDS_API_KEY = import.meta.env.VITE_MARKET_SUPABASE_KEY || "";
 
 interface UnifiedPost {
   id: string;
@@ -83,6 +80,11 @@ const CommunityList: React.FC = () => {
       setApiLoading(true);
       setApiError(null);
       try {
+        if (!ALOHA_FUNDS_API_BASE || !ALOHA_FUNDS_API_KEY) {
+          // Market updates are optional; skip if not configured.
+          setApiReports([]);
+          return;
+        }
         const url = `${ALOHA_FUNDS_API_BASE}/rest/v1/reports?select=*`;
         const resp = await axios.get<UnifiedPost[]>(url, {
           headers: {

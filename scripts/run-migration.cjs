@@ -6,8 +6,27 @@
 const fs = require('fs');
 const https = require('https');
 
-const SUPABASE_URL = 'ibsisfnjxeowvdtvgzff.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlic2lzZm5qeGVvd3ZkdHZnemZmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDU1OTU3OCwiZXhwIjoyMDgwMTM1NTc4fQ.j6SSw41LwGzXGAW0U_mQh6hGGnFekOE7GV__xevJY2M';
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  '';
+
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NDA_TEST_SERVICE_ROLE_KEY ||
+  '';
+
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY.');
+  console.error('Refusing to run without explicit env configuration.');
+  process.exit(1);
+}
+
+const SUPABASE_ORIGIN = (
+  SUPABASE_URL.startsWith('http') ? SUPABASE_URL : `https://${SUPABASE_URL}`
+).replace(/\/$/, '');
+
+const SUPABASE_HOST = SUPABASE_ORIGIN.replace(/^https?:\/\//, '');
 
 // Read the migration SQL
 const sql = fs.readFileSync('./supabase/migrations/20260116000000_create_hushh_agent_users.sql', 'utf8');
@@ -19,7 +38,7 @@ console.log('📡 Connecting to Supabase...');
 const postData = JSON.stringify({ query: sql });
 
 const options = {
-  hostname: SUPABASE_URL,
+  hostname: SUPABASE_HOST,
   port: 443,
   path: '/rest/v1/rpc/exec_sql',
   method: 'POST',
@@ -37,7 +56,7 @@ const options = {
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
-  `https://${SUPABASE_URL}`,
+  SUPABASE_ORIGIN,
   SERVICE_KEY
 );
 

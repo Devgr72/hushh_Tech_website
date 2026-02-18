@@ -1,12 +1,14 @@
 import axios from "axios";
 
-// API configuration - Using the same API configuration as UserRegistration
-const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwbXp5a294cW5ib3pnZG9xYnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDE5Mjc5NzEsImV4cCI6MjAxNzUwMzk3MX0.3GwG8YQKwZSWfGgTBEEA47YZAZ-Nr4HiirYPWiZtpZ0";
-const API_BASE_URL = "https://rpmzykoxqnbozgdoqbpc.supabase.co/rest/v1";
+// API configuration
+// NOTE: Configure via env to avoid committing keys.
+const API_KEY = import.meta.env.VITE_REGISTRATION_SUPABASE_ANON_KEY || "";
+const API_BASE_URL = import.meta.env.VITE_REGISTRATION_SUPABASE_URL || "";
+
 const API_HEADERS = {
-  'apikey': API_KEY,
-  'Authorization': `Bearer ${API_KEY}`,
-  'Content-Type': 'application/json'
+  apikey: API_KEY,
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
 };
 
 export interface RegistrationStatus {
@@ -22,6 +24,14 @@ export interface RegistrationStatus {
  */
 export default async function checkRegistrationStatus(email: string): Promise<RegistrationStatus> {
   try {
+    if (!API_KEY || !API_BASE_URL) {
+      // If not configured, fail closed (treat as not registered).
+      return {
+        isRegistered: false,
+        hasHushhId: false,
+        userData: null,
+      };
+    }
     // Search for user by email using the search API
     const response = await axios.get(
       `${API_BASE_URL}/users?or=(email.ilike.*${email}*)`,

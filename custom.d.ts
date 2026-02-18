@@ -1,5 +1,5 @@
 declare module "*.svg" {
-  const content: React.FunctionComponent<React.SVGAttributes<SVGElement>>;
+  const content: string;
   export default content;
 }
 
@@ -29,6 +29,13 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
   readonly VITE_SUPABASE_REDIRECT_URL?: string;
+  readonly VITE_PLAID_REDIRECT_URI?: string;
+
+  // Optional secondary Supabase projects
+  readonly VITE_MARKET_SUPABASE_URL?: string;
+  readonly VITE_MARKET_SUPABASE_KEY?: string;
+  readonly VITE_REGISTRATION_SUPABASE_URL?: string;
+  readonly VITE_REGISTRATION_SUPABASE_ANON_KEY?: string;
   readonly VITE_OPENAI_API_KEY?: string;
   readonly VITE_FINNHUB_API_KEY?: string;
   readonly VITE_GEMINI_API_KEY?: string;
