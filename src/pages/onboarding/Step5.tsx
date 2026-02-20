@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import config from '../../resources/config/config';
 import { upsertOnboardingData } from '../../services/onboarding/upsertOnboardingData';
-import type { AccountStructure } from '../../types/onboarding';
+import type { UIAccountType } from '../../types/onboarding';
+import { ACCOUNT_TYPE_OPTIONS } from '../../types/onboarding';
 import { useFooterVisibility } from '../../utils/useFooterVisibility';
 import { locationService } from '../../services/location';
 import { OnboardingStepProgress } from '../../components/onboarding/OnboardingStepProgress';
@@ -52,10 +53,15 @@ const PHONE_DIAL_CODES = [
   { code: '+90', label: 'Turkey (+90)' },
 ];
 
+/** Maps UIAccountType → legacy account_structure value for backward compatibility */
+const toAccountStructure = (accountType: UIAccountType): 'individual' | 'other' => {
+  return accountType === 'individual' ? 'individual' : 'other';
+};
+
 export default function OnboardingStep5() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
-  const [selectedStructure, setSelectedStructure] = useState<AccountStructure | null>(null);
+  const [selectedAccountType, setSelectedAccountType] = useState<UIAccountType | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('+1');
   const [isAutoDetectingDialCode, setIsAutoDetectingDialCode] = useState(false);
@@ -63,14 +69,13 @@ export default function OnboardingStep5() {
   const isFooterVisible = useFooterVisibility();
 
   useEffect(() => {
-    // Scroll to top on component mount
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
     const getCurrentUser = async () => {
       if (!config.supabaseClient) return;
-      
+
       const { data: { user } } = await config.supabaseClient.auth.getUser();
       if (!user) {
         navigate('/login');
@@ -81,13 +86,20 @@ export default function OnboardingStep5() {
       // Load existing data if any
       const { data: onboardingData } = await config.supabaseClient
         .from('onboarding_data')
-        // Select * to remain compatible across schema revisions (gps_location_data columns may not exist).
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (onboardingData?.account_structure) {
-        setSelectedStructure(onboardingData.account_structure as AccountStructure);
+      // Restore account type — prefer account_type, fall back to account_structure
+      if (onboardingData?.account_type) {
+        const validTypes: UIAccountType[] = ['individual', 'joint', 'retirement', 'trust'];
+        const saved = onboardingData.account_type as string;
+        if (validTypes.includes(saved as UIAccountType)) {
+          setSelectedAccountType(saved as UIAccountType);
+        }
+      } else if (onboardingData?.account_structure === 'individual') {
+        // Backward compat: old data only has account_structure
+        setSelectedAccountType('individual');
       }
 
       if (onboardingData?.phone_number) {
@@ -144,7 +156,7 @@ export default function OnboardingStep5() {
   };
 
   const isValidPhone = phoneNumber.length >= 8 && phoneNumber.length <= 15;
-  const canContinue = Boolean(selectedStructure) && isValidPhone;
+  const canContinue = Boolean(selectedAccountType) && isValidPhone;
 
   const dialCodeOptions = useMemo(() => {
     if (countryCode && !PHONE_DIAL_CODES.some((c) => c.code === countryCode)) {
@@ -154,12 +166,15 @@ export default function OnboardingStep5() {
   }, [countryCode]);
 
   const handleContinue = async () => {
-    if (!selectedStructure || !userId || !config.supabaseClient || !isValidPhone) return;
+    if (!selectedAccountType || !userId || !config.supabaseClient || !isValidPhone) return;
 
     setIsLoading(true);
     try {
       await upsertOnboardingData(userId, {
-        account_structure: selectedStructure,
+        // Primary field — used by the profile page to display account type
+        account_type: selectedAccountType,
+        // Backward-compatible field — keeps legacy consumers working
+        account_structure: toAccountStructure(selectedAccountType),
         phone_number: phoneNumber,
         phone_country_code: countryCode,
         current_step: 5,
@@ -178,15 +193,15 @@ export default function OnboardingStep5() {
   };
 
   return (
-    <div 
+    <div
       className="bg-slate-50 min-h-screen"
       style={{ fontFamily: "'Manrope', sans-serif" }}
     >
       <div className="onboarding-shell relative flex min-h-screen w-full flex-col bg-white max-w-[500px] mx-auto shadow-xl overflow-hidden border-x border-slate-100">
-        
+
         {/* Sticky Header */}
         <header className="flex items-center px-4 pt-4 pb-2 bg-white sticky top-0 z-10">
-          <button 
+          <button
             onClick={handleBack}
             aria-label="Go back"
             className="flex size-10 shrink-0 items-center justify-center text-slate-900 rounded-full hover:bg-slate-50 transition-colors"
@@ -209,46 +224,39 @@ export default function OnboardingStep5() {
             </p>
           </div>
 
-          {/* Account Options Card */}
+          {/* Account Type Selection */}
           <h2 className="text-slate-900 text-base font-bold mb-3">Account type</h2>
           <div className="bg-white rounded-2xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-            {/* Individual Account Option */}
-            <button
-              onClick={() => setSelectedStructure('individual')}
-              className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors border-b border-gray-100"
-            >
-              <span className="text-slate-900 text-base font-medium">Individual account</span>
-              <div 
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                  selectedStructure === 'individual'
-                    ? 'border-[#2b8cee] bg-[#2b8cee]'
-                    : 'border-slate-300 bg-white'
-                }`}
-              >
-                {selectedStructure === 'individual' && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
-                )}
-              </div>
-            </button>
+            {ACCOUNT_TYPE_OPTIONS.map((option, index) => {
+              const isSelected = selectedAccountType === option.value;
+              const isLast = index === ACCOUNT_TYPE_OPTIONS.length - 1;
 
-            {/* Other Account Type Option */}
-            <button
-              onClick={() => setSelectedStructure('other')}
-              className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
-            >
-              <span className="text-slate-900 text-base font-medium">Other account type</span>
-              <div 
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                  selectedStructure === 'other'
-                    ? 'border-[#2b8cee] bg-[#2b8cee]'
-                    : 'border-slate-300 bg-white'
-                }`}
-              >
-                {selectedStructure === 'other' && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
-                )}
-              </div>
-            </button>
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedAccountType(option.value)}
+                  className={`w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors ${
+                    !isLast ? 'border-b border-gray-100' : ''
+                  }`}
+                  aria-label={`Select ${option.label} account`}
+                  role="radio"
+                  aria-checked={isSelected}
+                >
+                  <span className="text-slate-900 text-base font-medium">{option.label}</span>
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isSelected
+                        ? 'border-[#2b8cee] bg-[#2b8cee]'
+                        : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Phone Number */}
@@ -260,7 +268,7 @@ export default function OnboardingStep5() {
               )}
             </div>
             <p className="text-slate-500 text-sm leading-relaxed mb-4">
-              We'll use this to verify your identity when needed.
+              We&apos;ll use this to verify your identity when needed.
             </p>
 
             <div className="flex w-full items-center gap-3">
@@ -306,7 +314,6 @@ export default function OnboardingStep5() {
             className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-[500px] mx-auto border-t border-slate-100 bg-white/90 backdrop-blur-md px-4 sm:px-6 pt-4 sm:pt-5 pb-[calc(env(safe-area-inset-bottom)+16px)] shadow-[0_-4px_20px_rgba(0,0,0,0.04)]"
             data-onboarding-footer
           >
-            {/* Buttons */}
             <div className="flex flex-col gap-3 sm:gap-4">
               {/* Continue Button */}
               <button
@@ -336,4 +343,3 @@ export default function OnboardingStep5() {
     </div>
   );
 }
-
