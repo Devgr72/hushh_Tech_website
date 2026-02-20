@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Select, {
+  components,
+  type OptionProps,
+  type SingleValueProps,
+  type StylesConfig,
+} from 'react-select';
+import ReactCountryFlag from 'react-country-flag';
 import config from '../../resources/config/config';
 import { upsertOnboardingData } from '../../services/onboarding/upsertOnboardingData';
 import type { UIAccountType } from '../../types/onboarding';
@@ -15,43 +22,134 @@ const BackIcon = () => (
   </svg>
 );
 
-// Chevron down icon for select
-const ChevronDownIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 9l6 6 6-6" />
-  </svg>
+interface DialCodeOption {
+  code: string;
+  country: string;
+  iso: string;
+}
+
+const PHONE_DIAL_CODES: DialCodeOption[] = [
+  { code: '+1', country: 'United States', iso: 'US' },
+  { code: '+44', country: 'United Kingdom', iso: 'GB' },
+  { code: '+33', country: 'France', iso: 'FR' },
+  { code: '+49', country: 'Germany', iso: 'DE' },
+  { code: '+39', country: 'Italy', iso: 'IT' },
+  { code: '+34', country: 'Spain', iso: 'ES' },
+  { code: '+31', country: 'Netherlands', iso: 'NL' },
+  { code: '+91', country: 'India', iso: 'IN' },
+  { code: '+86', country: 'China', iso: 'CN' },
+  { code: '+81', country: 'Japan', iso: 'JP' },
+  { code: '+82', country: 'South Korea', iso: 'KR' },
+  { code: '+61', country: 'Australia', iso: 'AU' },
+  { code: '+65', country: 'Singapore', iso: 'SG' },
+  { code: '+971', country: 'United Arab Emirates', iso: 'AE' },
+  { code: '+966', country: 'Saudi Arabia', iso: 'SA' },
+  { code: '+55', country: 'Brazil', iso: 'BR' },
+  { code: '+52', country: 'Mexico', iso: 'MX' },
+  { code: '+7', country: 'Russia', iso: 'RU' },
+  { code: '+62', country: 'Indonesia', iso: 'ID' },
+  { code: '+60', country: 'Malaysia', iso: 'MY' },
+  { code: '+66', country: 'Thailand', iso: 'TH' },
+  { code: '+63', country: 'Philippines', iso: 'PH' },
+  { code: '+92', country: 'Pakistan', iso: 'PK' },
+  { code: '+880', country: 'Bangladesh', iso: 'BD' },
+  { code: '+27', country: 'South Africa', iso: 'ZA' },
+  { code: '+234', country: 'Nigeria', iso: 'NG' },
+  { code: '+20', country: 'Egypt', iso: 'EG' },
+  { code: '+90', country: 'Turkey', iso: 'TR' },
+];
+
+const DialCodeOptionRow = ({ option }: { option: DialCodeOption }) => (
+  <div className="flex min-w-0 items-center gap-2.5">
+    <ReactCountryFlag
+      countryCode={option.iso}
+      svg
+      style={{ width: '1.15em', height: '1.15em', borderRadius: 2, flexShrink: 0 }}
+      aria-label={option.country}
+      title={option.country}
+    />
+    <span className="truncate text-sm font-medium text-slate-900">{option.country}</span>
+    <span className="ml-auto text-sm font-semibold text-slate-500">{option.code}</span>
+  </div>
 );
 
-const PHONE_DIAL_CODES = [
-  { code: '+1', label: 'United States (+1)' },
-  { code: '+91', label: 'India (+91)' },
-  { code: '+44', label: 'United Kingdom (+44)' },
-  { code: '+86', label: 'China (+86)' },
-  { code: '+81', label: 'Japan (+81)' },
-  { code: '+49', label: 'Germany (+49)' },
-  { code: '+33', label: 'France (+33)' },
-  { code: '+61', label: 'Australia (+61)' },
-  { code: '+65', label: 'Singapore (+65)' },
-  { code: '+971', label: 'UAE (+971)' },
-  { code: '+966', label: 'Saudi Arabia (+966)' },
-  { code: '+82', label: 'South Korea (+82)' },
-  { code: '+55', label: 'Brazil (+55)' },
-  { code: '+52', label: 'Mexico (+52)' },
-  { code: '+39', label: 'Italy (+39)' },
-  { code: '+34', label: 'Spain (+34)' },
-  { code: '+31', label: 'Netherlands (+31)' },
-  { code: '+7', label: 'Russia (+7)' },
-  { code: '+62', label: 'Indonesia (+62)' },
-  { code: '+60', label: 'Malaysia (+60)' },
-  { code: '+66', label: 'Thailand (+66)' },
-  { code: '+63', label: 'Philippines (+63)' },
-  { code: '+92', label: 'Pakistan (+92)' },
-  { code: '+880', label: 'Bangladesh (+880)' },
-  { code: '+27', label: 'South Africa (+27)' },
-  { code: '+234', label: 'Nigeria (+234)' },
-  { code: '+20', label: 'Egypt (+20)' },
-  { code: '+90', label: 'Turkey (+90)' },
-];
+const DialCodeOptionComponent = (props: OptionProps<DialCodeOption, false>) => (
+  <components.Option {...props}>
+    <DialCodeOptionRow option={props.data} />
+  </components.Option>
+);
+
+const DialCodeSingleValueComponent = (props: SingleValueProps<DialCodeOption, false>) => (
+  <components.SingleValue {...props}>
+    <DialCodeOptionRow option={props.data} />
+  </components.SingleValue>
+);
+
+const dialCodeSelectStyles: StylesConfig<DialCodeOption, false> = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: 54,
+    borderRadius: 12,
+    borderColor: state.isFocused ? '#3A63B8' : '#E2E8F0',
+    boxShadow: state.isFocused ? '0 0 0 2px rgba(58,99,184,0.22)' : '0 1px 2px rgba(15,23,42,0.06)',
+    '&:hover': {
+      borderColor: state.isFocused ? '#3A63B8' : '#CBD5E1',
+    },
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    padding: '6px 10px',
+  }),
+  singleValue: (base) => ({
+    ...base,
+    margin: 0,
+    width: '100%',
+    maxWidth: '100%',
+  }),
+  input: (base) => ({
+    ...base,
+    margin: 0,
+    padding: 0,
+  }),
+  indicatorsContainer: (base) => ({
+    ...base,
+    paddingRight: 4,
+  }),
+  indicatorSeparator: () => ({ display: 'none' }),
+  dropdownIndicator: (base, state) => ({
+    ...base,
+    color: '#64748B',
+    transform: state.selectProps.menuIsOpen ? 'rotate(180deg)' : undefined,
+    transition: 'transform 0.16s ease',
+    ':hover': { color: '#334155' },
+  }),
+  menu: (base) => ({
+    ...base,
+    overflow: 'hidden',
+    borderRadius: 12,
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 12px 28px rgba(15,23,42,0.16)',
+    maxWidth: 'calc(100vw - 24px)',
+    zIndex: 60,
+  }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 80,
+  }),
+  menuList: (base) => ({
+    ...base,
+    maxHeight: 220,
+    paddingTop: 4,
+    paddingBottom: 4,
+  }),
+  option: (base, state) => ({
+    ...base,
+    padding: '10px 12px',
+    backgroundColor: state.isSelected ? '#EAF2FF' : state.isFocused ? '#F8FAFC' : '#FFFFFF',
+    color: '#0F172A',
+    cursor: 'pointer',
+  }),
+};
 
 /** Maps UIAccountType → legacy account_structure value for backward compatibility */
 const toAccountStructure = (accountType: UIAccountType): 'individual' | 'other' => {
@@ -64,6 +162,7 @@ export default function OnboardingStep5() {
   const [selectedAccountType, setSelectedAccountType] = useState<UIAccountType | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('+1');
+  const [selectedDialCountryIso, setSelectedDialCountryIso] = useState('US');
   const [isAutoDetectingDialCode, setIsAutoDetectingDialCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const isFooterVisible = useFooterVisibility();
@@ -114,6 +213,10 @@ export default function OnboardingStep5() {
 
       if (cachedDial) {
         setCountryCode(cachedDial);
+        const matchedByDial = PHONE_DIAL_CODES.find((option) => option.code === cachedDial);
+        if (matchedByDial) {
+          setSelectedDialCountryIso(matchedByDial.iso);
+        }
       } else {
         // No cached dial code yet: use IP location (no permission prompt) and cache it for later steps.
         setIsAutoDetectingDialCode(true);
@@ -121,6 +224,16 @@ export default function OnboardingStep5() {
           const ipLoc = await locationService.getLocationByIp();
           if (ipLoc?.phoneDialCode) {
             setCountryCode(ipLoc.phoneDialCode);
+            const matchedByDial = PHONE_DIAL_CODES.find((option) => option.code === ipLoc.phoneDialCode);
+            if (matchedByDial) {
+              setSelectedDialCountryIso(matchedByDial.iso);
+            }
+          }
+          if (ipLoc?.countryCode) {
+            const iso = String(ipLoc.countryCode).toUpperCase();
+            if (PHONE_DIAL_CODES.some((option) => option.iso === iso)) {
+              setSelectedDialCountryIso(iso);
+            }
           }
           if (!onboardingData?.gps_location_data) {
             try {
@@ -160,10 +273,20 @@ export default function OnboardingStep5() {
 
   const dialCodeOptions = useMemo(() => {
     if (countryCode && !PHONE_DIAL_CODES.some((c) => c.code === countryCode)) {
-      return [{ code: countryCode, label: `Custom (${countryCode})` }, ...PHONE_DIAL_CODES];
+      return [{ code: countryCode, country: `Custom (${countryCode})`, iso: 'US' }, ...PHONE_DIAL_CODES];
     }
     return PHONE_DIAL_CODES;
   }, [countryCode]);
+
+  const selectedDialOption = useMemo(() => {
+    const exactMatch = dialCodeOptions.find(
+      (option) => option.code === countryCode && option.iso === selectedDialCountryIso,
+    );
+    if (exactMatch) return exactMatch;
+
+    const codeMatch = dialCodeOptions.find((option) => option.code === countryCode);
+    return codeMatch ?? null;
+  }, [countryCode, dialCodeOptions, selectedDialCountryIso]);
 
   const handleContinue = async () => {
     if (!selectedAccountType || !userId || !config.supabaseClient || !isValidPhone) return;
@@ -194,37 +317,36 @@ export default function OnboardingStep5() {
 
   return (
     <div
-      className="bg-slate-50 min-h-screen"
+      className="min-h-screen bg-slate-50"
       style={{ fontFamily: "'Manrope', sans-serif" }}
     >
       <div className="onboarding-shell relative flex min-h-screen w-full flex-col bg-white max-w-[500px] mx-auto shadow-xl overflow-hidden border-x border-slate-100">
-
         {/* Sticky Header */}
-        <header className="flex items-center px-4 pt-4 pb-2 bg-white sticky top-0 z-10">
+        <header className="sticky top-0 z-20 flex items-center bg-white/90 px-4 pt-4 pb-2 backdrop-blur-sm sm:px-6 sm:pt-5">
           <button
             onClick={handleBack}
             aria-label="Go back"
-            className="flex size-10 shrink-0 items-center justify-center text-slate-900 rounded-full hover:bg-slate-50 transition-colors"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full text-slate-900 transition-colors hover:bg-slate-100"
           >
             <BackIcon />
           </button>
         </header>
 
-        <OnboardingStepProgress currentStep={5} />
+        <OnboardingStepProgress currentStep={5} totalSteps={12} visibleSteps={12} />
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col px-4 sm:px-6 pb-40 sm:pb-44">
+        <main className="flex-1 overflow-y-auto px-4 pb-40 sm:px-6 sm:pb-48">
           {/* Header Section */}
-          <div className="mb-8 text-center">
-            <h1 className="text-slate-900 text-[22px] font-bold leading-tight tracking-tight">
+          <div className="mb-8 mt-2 text-center">
+            <h1 className="text-3xl font-bold text-slate-900">
               A few more details
             </h1>
-            <p className="text-slate-500 text-[14px] font-normal leading-relaxed mt-2">
+            <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-slate-500">
               This helps us personalize your account and keep your profile secure.
             </p>
           </div>
 
-          {/* Account Type Selection */}
+          {/* Account Type Selection — radio button list saves to account_type */}
           <h2 className="text-slate-900 text-base font-bold mb-3">Account type</h2>
           <div className="bg-white rounded-2xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
             {ACCOUNT_TYPE_OPTIONS.map((option, index) => {
@@ -271,38 +393,46 @@ export default function OnboardingStep5() {
               We&apos;ll use this to verify your identity when needed.
             </p>
 
-            <div className="flex w-full items-center gap-3">
-              {/* Country Code Selector */}
-              <div className="relative h-14 w-[150px] flex-shrink-0">
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="h-full w-full appearance-none rounded-full border border-gray-200 bg-white pl-4 pr-8 text-sm font-semibold text-slate-900 focus:border-[#2b8cee] focus:outline-none focus:ring-1 focus:ring-[#2b8cee] cursor-pointer"
-                >
-                  {dialCodeOptions.map((country) => (
-                    <option key={`${country.label}-${country.code}`} value={country.code}>
-                      {country.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
-                  <ChevronDownIcon />
-                </div>
+            <div className="flex w-full gap-3">
+              <div className="relative min-w-[124px] flex-[0.9]">
+                <Select<DialCodeOption, false>
+                  inputId="phone-country-code"
+                  className="w-full"
+                  options={dialCodeOptions}
+                  value={selectedDialOption}
+                  onChange={(selected) => {
+                    if (!selected) return;
+                    setSelectedDialCountryIso(selected.iso);
+                    setCountryCode(selected.code);
+                  }}
+                  isSearchable
+                  placeholder="Country"
+                  styles={dialCodeSelectStyles}
+                  components={{
+                    Option: DialCodeOptionComponent,
+                    SingleValue: DialCodeSingleValueComponent,
+                  }}
+                  menuPlacement="auto"
+                  menuPosition="fixed"
+                  maxMenuHeight={220}
+                  menuShouldScrollIntoView={false}
+                  menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                  noOptionsMessage={() => 'No countries found'}
+                />
               </div>
 
-              {/* Phone Number Input */}
-              <div className="relative h-14 flex-1">
+              <div className="relative flex-1">
                 <input
                   type="tel"
                   value={formatPhoneNumber(phoneNumber)}
                   onChange={handlePhoneChange}
-                  placeholder="(555) 000-0000"
-                  className="h-full w-full rounded-full border border-gray-200 bg-white px-5 text-base font-semibold text-slate-900 placeholder:text-slate-400 focus:border-[#2b8cee] focus:outline-none focus:ring-1 focus:ring-[#2b8cee] transition-all"
+                  placeholder="(000) 000-0000"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-[#3A63B8]"
                 />
               </div>
             </div>
 
-            <p className="px-2 text-xs font-medium text-slate-400 mt-2">
+            <p className="pt-1 text-xs text-slate-500">
               Standard message and data rates may apply.
             </p>
           </div>
@@ -322,19 +452,11 @@ export default function OnboardingStep5() {
                 data-onboarding-cta
                 className={`flex w-full h-11 sm:h-12 cursor-pointer items-center justify-center rounded-full px-6 text-sm sm:text-base font-semibold transition-all active:scale-[0.98] ${
                   canContinue && !isLoading
-                    ? 'bg-[#2b8cee] text-white hover:bg-[#2070c0] shadow-md shadow-[#2b8cee]/20'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    ? 'bg-[#3A63B8] text-white hover:bg-[#2e4f94] shadow-lg shadow-blue-500/20'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
                 {isLoading ? 'Saving...' : 'Continue'}
-              </button>
-
-              {/* Back Button */}
-              <button
-                onClick={handleBack}
-                className="flex w-full cursor-pointer items-center justify-center rounded-full bg-transparent py-2 text-slate-500 text-sm font-semibold hover:text-slate-800 transition-colors"
-              >
-                Back
               </button>
             </div>
           </div>

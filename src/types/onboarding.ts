@@ -20,7 +20,7 @@ export type ReferralSource =
   | 'tv_radio'
   | 'other';
 
-export type AccountStructure = 'individual' | 'other';
+export type AccountStructure = 'individual' | 'joint' | 'retirement' | 'trust' | 'other';
 
 // UI-facing account type values used in Step 5 and the profile page.
 // These map directly to the DB account_type column (constraint updated via migration).
