@@ -502,7 +502,7 @@ function OnboardingStep11() {
 
   return (
     <div
-      className="bg-white min-h-[100dvh]"
+      className="bg-white min-h-[100dvh] pb-52"
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif", WebkitFontSmoothing: 'antialiased' }}
     >
       {/* ═══ iOS Navigation Bar ═══ */}

@@ -209,7 +209,7 @@ export default function OnboardingStep5() {
      ═══════════════════════════════════════════════ */
   return (
     <div
-      className="bg-white min-h-[100dvh] flex flex-col relative"
+      className="bg-white min-h-[100dvh] pb-52 relative"
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif", WebkitFontSmoothing: 'antialiased' }}
     >
       {/* ═══ iOS Navigation Bar ═══ */}
