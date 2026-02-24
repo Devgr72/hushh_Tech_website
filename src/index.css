@@ -594,6 +594,16 @@ body.onboarding-page-scroll {
   }
 }
 
+/* Home page font overrides — Inter body + Playfair Display headings */
+[data-page="home"],
+[data-page="home"] *:not(.material-symbols-outlined) {
+  font-family: "Inter", sans-serif !important;
+}
+[data-page="home"] .font-serif,
+[data-page="home"] .font-serif * {
+  font-family: "Playfair Display", serif !important;
+}
+
 /* Global responsive safety */
 html,
 body,
