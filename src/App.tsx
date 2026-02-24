@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
+import HomePage from './pages/home/ui';
 import Leadership from './components/Leadership';
 import Philosophy from './components/Philosophy';
 import Footer from './components/Footer';
-import Login from './pages/Login'
+import LoginPage from './pages/login/ui'
 import Contact from './pages/Contact';
 import ScrollToTop from './components/ScrollToTop';
 import OnboardingShellAutoPadding from './components/OnboardingShellAutoPadding';
@@ -14,7 +14,7 @@ import { ChakraProvider } from '@chakra-ui/react';
 import theme from './theme';
 import Consumers from './pages/services/consumers';
 import Business from './pages/services/business';
-import Signup from './pages/Signup';
+import SignupPage from './pages/signup/ui';
 import Faq from './pages/faq';
 import Career from './pages/career';
 // import Community from './pages/community';
@@ -51,19 +51,19 @@ import PrivacyControlsPage from './pages/hushh-user-profile/privacy';
 import PublicHushhProfilePage from './pages/hushhid';
 import PublicInvestorProfilePage from './pages/investor/PublicInvestorProfile';
 import HushhIDHeroDemo from './pages/hushhid-hero-demo';
-import FinancialLinkPage from './pages/onboarding/FinancialLink';
-import OnboardingStep1 from './pages/onboarding/Step1';
-import OnboardingStep2 from './pages/onboarding/Step2';
-import OnboardingStep4 from './pages/onboarding/Step4';
-import OnboardingStep5 from './pages/onboarding/Step5';
-import OnboardingStep7 from './pages/onboarding/Step7';
-import OnboardingStep8 from './pages/onboarding/Step8';
-import OnboardingStep9 from './pages/onboarding/Step9';
-import OnboardingStep11 from './pages/onboarding/Step11';
-import OnboardingStep13 from './pages/onboarding/Step13';
-import VerifyIdentityPage from './pages/onboarding/VerifyIdentity';
-import VerifyCompletePage from './pages/onboarding/VerifyComplete';
-import MeetCeoPage from './pages/onboarding/MeetCeo';
+import FinancialLinkPage from './pages/onboarding/financial-link/ui';
+import OnboardingStep1 from './pages/onboarding/step-1/ui';
+import OnboardingStep2 from './pages/onboarding/step-2/ui';
+import OnboardingStep4 from './pages/onboarding/step-4/ui';
+import OnboardingStep5 from './pages/onboarding/step-5/ui';
+import OnboardingStep7 from './pages/onboarding/step-7/ui';
+import OnboardingStep8 from './pages/onboarding/step-8/ui';
+import OnboardingStep9 from './pages/onboarding/step-9/ui';
+import OnboardingStep11 from './pages/onboarding/step-11/ui';
+import OnboardingStep13 from './pages/onboarding/step-13/ui';
+import VerifyIdentityPage from './pages/onboarding/verify-identity/ui';
+import VerifyCompletePage from './pages/onboarding/verify-complete/ui';
+import MeetCeoPage from './pages/onboarding/meet-ceo/ui';
 import InvestorGuidePage from './pages/onboarding/InvestorGuide';
 import KYCDemoPage from './pages/kyc-demo';
 import KycFlowPage from './pages/kyc-flow';
@@ -198,15 +198,15 @@ function App() {
         {/* {session && <NDAPopup />} */}
         <ContentWrapper>
           <Routes>
-            <Route path="/" element={<Hero />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/about/leadership" element={<Leadership />} />
             <Route path="/about/philosophy" element={<Philosophy />} />
-            <Route path="/Login" element={<Login />} />
+            <Route path="/Login" element={<LoginPage />} />
             <Route path="/Contact" element={<Contact />} />
             <Route path="/benefits" element={<BenefitsPage />} />
             <Route path='/services/consumers' element={<Consumers />} />
             <Route path='/services/business' element={<Business />} />
-            <Route path='/Signup' element={<Signup />} />
+            <Route path='/Signup' element={<SignupPage />} />
             <Route path='/faq' element={<Faq />} />
             <Route path='/profile' element={
               <Profile />
