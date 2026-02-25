@@ -376,6 +376,7 @@ export const useHushhUserProfileLogic = () => {
                 phone_number: onboardingData.phone_number || "",
                 organisation: null,
                 investor_profile: null, // No AI profile yet, just basic row for slug
+                is_public: true, // Public by default so shared links work
                 user_confirmed: false,
               })
               .select("slug")
@@ -533,6 +534,7 @@ export const useHushhUserProfileLogic = () => {
             phone_country_code: form.phoneCountryCode,
             phone_number: form.phoneNumber,
             organisation: form.organisation || null,
+            is_public: true, // Always public so shared links work
             user_confirmed: true,
             confirmed_at: new Date().toISOString(),
           };
@@ -560,33 +562,31 @@ export const useHushhUserProfileLogic = () => {
         }
       }
 
-      // REQUIRE BOTH APIs to succeed before showing profiles
+      // Show whatever succeeded — don't require both APIs
       const investorSuccess = investorResult.status === 'fulfilled' && investorResult.value.success;
       const shadowSuccess = shadowResult.status === 'fulfilled' && shadowResult.value.success;
 
       if (investorSuccess && shadowSuccess) {
-        // Both succeeded - show success and enable profile display
         toast({
           title: "Profile Complete",
-          description: "Both AI profiles generated successfully",
+          description: "AI profile generated successfully",
           status: "success",
           duration: 4000,
         });
       } else if (!investorSuccess && !shadowSuccess) {
-        // Both failed
+        // Both failed — throw error
         setInvestorProfile(null);
         setShadowProfile(null);
         throw new Error("Failed to generate profiles. Please try again.");
       } else {
-        // Only one succeeded - clear partial results and show warning
-        setInvestorProfile(null);
-        setShadowProfile(null);
-        const failedApi = !investorSuccess ? "Investor Profile" : "Shadow Investigator";
+        // At least one succeeded — show partial results (don't clear them)
         toast({
-          title: "Partial Failure",
-          description: `${failedApi} API failed. Please try again for complete results.`,
-          status: "warning",
-          duration: 5000,
+          title: "Profile Generated",
+          description: investorSuccess
+            ? "Investor profile ready. Shadow profile will retry later."
+            : "Shadow profile ready. Investor profile will retry later.",
+          status: "success",
+          duration: 4000,
         });
       }
     } catch (error) {
