@@ -68,6 +68,29 @@ export type { UIAccountType };
    HOOK
    ═══════════════════════════════════════════════ */
 
+/**
+ * Parse a full international phone number (e.g. "+12125551234")
+ * into { dialCode, localNumber } by matching against known dial codes.
+ * Uses longest-match to handle codes like +1 vs +91.
+ */
+const parseInternationalPhone = (raw: string): { dialCode: string; localNumber: string } | null => {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^\d+]/g, '');
+  if (!cleaned.startsWith('+')) return null;
+
+  // Sort dial codes by length descending to match longest first (e.g. +880 before +8)
+  const sorted = [...PHONE_DIAL_CODES].sort((a, b) => b.code.length - a.code.length);
+  for (const opt of sorted) {
+    if (cleaned.startsWith(opt.code)) {
+      const local = cleaned.slice(opt.code.length);
+      if (local.length >= 6) {
+        return { dialCode: opt.code, localNumber: local };
+      }
+    }
+  }
+  return null;
+};
+
 export function useStep5Logic() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
@@ -78,6 +101,7 @@ export function useStep5Logic() {
   const [isAutoDetectingDialCode, setIsAutoDetectingDialCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showDialPicker, setShowDialPicker] = useState(false);
+  const [isPreFilledFromBank, setIsPreFilledFromBank] = useState(false);
   const isFooterVisible = useFooterVisibility();
 
   /* ─── Enable page-level scrolling ─── */
@@ -117,10 +141,54 @@ export function useStep5Logic() {
         setSelectedAccountType('individual');
       }
 
+      /* ── Pre-populate phone from Plaid identity if not already saved ── */
+      let hasPhoneFromOnboarding = false;
+
       if (onboardingData?.phone_number) {
         setPhoneNumber(String(onboardingData.phone_number).replace(/\D/g, ''));
+        hasPhoneFromOnboarding = true;
       }
 
+      /* Try Plaid identity data for phone pre-fill (only if no phone saved yet) */
+      let plaidSetDialCode = false;
+      if (!hasPhoneFromOnboarding) {
+        try {
+          const { data: financialData } = await config.supabaseClient
+            .from('user_financial_data')
+            .select('identity_data')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (financialData?.identity_data) {
+            const identityData = financialData.identity_data as any;
+            const accounts = identityData?.accounts || [];
+            const owners = accounts[0]?.owners || [];
+            const owner = owners[0];
+
+            if (owner?.phone_numbers?.length) {
+              // Use the first (primary) phone number from bank
+              const bankPhone = owner.phone_numbers[0]?.data;
+              if (bankPhone) {
+                const parsed = parseInternationalPhone(String(bankPhone));
+                if (parsed) {
+                  setPhoneNumber(parsed.localNumber);
+                  setCountryCode(parsed.dialCode);
+                  const matched = PHONE_DIAL_CODES.find((o) => o.code === parsed.dialCode);
+                  if (matched) setSelectedDialCountryIso(matched.iso);
+                  setIsPreFilledFromBank(true);
+                  plaidSetDialCode = true;
+                  console.log('[Step5] Phone pre-filled from Plaid identity:', parsed.dialCode, parsed.localNumber.slice(0, 3) + '***');
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Step5] Plaid identity fetch failed (ignoring):', err);
+        }
+      }
+
+      /* Only run dial code detection if Plaid didn't already set it */
+      if (!plaidSetDialCode) {
       const savedPhoneCode = onboardingData?.phone_country_code ? String(onboardingData.phone_country_code) : '';
       const cachedDial =
         savedPhoneCode ||
@@ -154,6 +222,7 @@ export function useStep5Logic() {
           setIsAutoDetectingDialCode(false);
         }
       }
+      } // end if (!plaidSetDialCode)
     };
     getCurrentUser();
   }, [navigate]);
@@ -169,7 +238,11 @@ export function useStep5Logic() {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 15) setPhoneNumber(value);
+    if (value.length <= 15) {
+      setPhoneNumber(value);
+      // Clear pre-filled badge once user edits the phone
+      if (isPreFilledFromBank) setIsPreFilledFromBank(false);
+    }
   };
 
   const isValidPhone = phoneNumber.length >= 8 && phoneNumber.length <= 15;
@@ -228,6 +301,7 @@ export function useStep5Logic() {
     canContinue,
     selectedDialOption,
     formatPhoneNumber,
+    isPreFilledFromBank,
 
     // Handlers
     handlePhoneChange,

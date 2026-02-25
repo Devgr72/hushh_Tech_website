@@ -42,6 +42,7 @@ export default function OnboardingStep5() {
     canContinue,
     selectedDialOption,
     formatPhoneNumber,
+    isPreFilledFromBank,
     handlePhoneChange,
     handleContinue,
     handleBack,
@@ -223,6 +224,21 @@ export default function OnboardingStep5() {
                 />
               </div>
             </div>
+
+            {/* Pre-filled from bank badge */}
+            {isPreFilledFromBank && (
+              <div className="mt-3 flex items-center gap-1.5">
+                <span
+                  className="material-symbols-outlined text-green-600 text-xs"
+                  style={{ fontVariationSettings: "'FILL' 1, 'wght' 400" }}
+                >
+                  verified
+                </span>
+                <span className="text-[10px] text-green-700 font-medium lowercase">
+                  pre-filled from your bank · tap to edit
+                </span>
+              </div>
+            )}
 
             <p className="text-[10px] text-gray-400 mt-2 lowercase font-medium">
               standard message and data rates may apply.
