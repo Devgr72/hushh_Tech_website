@@ -298,7 +298,7 @@ const ProfilePage = () => {
                     country: "test country",
                     email: userEmail || "test@example.com",
                     zipcode: "12345",
-                    user_coins: 100,
+                    user_coins: 300000,
                     dob: "1990-01-15",
                     phone_number: "+1234567890",
                     investor_type: "Individual Investor",
