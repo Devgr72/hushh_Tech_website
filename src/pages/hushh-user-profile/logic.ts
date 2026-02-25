@@ -457,11 +457,38 @@ export const useHushhUserProfileLogic = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Only name, email, and age are required - phone is pre-filled from onboarding and optional here
-    if (!form.name || !form.email || form.age === "") {
+    // Edge case: prevent double-submit while loading
+    if (loading) return;
+
+    // Validate required fields
+    if (!form.name?.trim() || !form.email?.trim() || form.age === "") {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields (Name, Email, Age)",
+        status: "warning",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Edge case: basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        status: "warning",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Edge case: age bounds check (1-120)
+    const ageNum = typeof form.age === "number" ? form.age : Number(form.age);
+    if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
+      toast({
+        title: "Invalid age",
+        description: "Age must be between 1 and 120",
         status: "warning",
         duration: 4000,
       });
@@ -615,9 +642,15 @@ export const useHushhUserProfileLogic = () => {
   };
 
   const handleSave = () => {
-    // Trigger form submit
-    const form = document.querySelector('form');
-    if (form) form.requestSubmit();
+    // Edge case: prevent double-click while already loading
+    if (loading) return;
+    // Edge case: ensure userId exists (auth completed)
+    if (!userId) {
+      toast({ title: "Please wait", description: "Still loading your profile...", status: "info", duration: 3000 });
+      return;
+    }
+    const formEl = document.querySelector('form');
+    if (formEl) formEl.requestSubmit();
   };
 
   // Handle Apple Wallet pass download
@@ -700,29 +733,39 @@ export const useHushhUserProfileLogic = () => {
     }
   };
 
-  // Social share handlers
+  // Edge case: show toast when user tries to share without a profile slug
+  const warnNoProfileUrl = () => {
+    toast({
+      title: "Profile not ready",
+      description: "Click 'Enhance with AI' first to generate your shareable profile",
+      status: "info",
+      duration: 4000,
+    });
+  };
+
+  // Social share handlers — with no-slug feedback
   const handleShareWhatsApp = () => {
-    if (!profileUrl) return;
+    if (!profileUrl) { warnNoProfileUrl(); return; }
     window.open(`https://wa.me/?text=${encodeURIComponent(`Check out my Hushh investor profile: ${profileUrl}`)}`, '_blank');
   };
 
   const handleShareX = () => {
-    if (!profileUrl) return;
+    if (!profileUrl) { warnNoProfileUrl(); return; }
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my Hushh investor profile: ${profileUrl}`)}`, '_blank');
   };
 
   const handleShareEmail = () => {
-    if (!profileUrl) return;
+    if (!profileUrl) { warnNoProfileUrl(); return; }
     window.location.href = `mailto:?subject=${encodeURIComponent('My Hushh Investor Profile')}&body=${encodeURIComponent(`Check out my investor profile: ${profileUrl}`)}`;
   };
 
   const handleShareLinkedIn = () => {
-    if (!profileUrl) return;
+    if (!profileUrl) { warnNoProfileUrl(); return; }
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}`, '_blank');
   };
 
   const handleOpenProfile = () => {
-    if (!profileUrl) return;
+    if (!profileUrl) { warnNoProfileUrl(); return; }
     window.open(profileUrl, '_blank');
   };
 
