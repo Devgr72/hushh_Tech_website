@@ -10,21 +10,21 @@ import { searchProfile, mapToOnboardingFields } from '../services/profileSearch'
 async function enrichUserProfile(userId: string, email: string, fullName: string, supabase: any) {
   try {
     console.log('[AuthCallback][ProfileEnrich] Starting profile enrichment for:', fullName);
-    
+
     // Call the AI-powered profile search API
-    const result = await searchProfile({ 
-      name: fullName, 
-      email: email 
+    const result = await searchProfile({
+      name: fullName,
+      email: email
     });
-    
+
     if (!result.success || !result.data) {
       console.log('[AuthCallback][ProfileEnrich] No profile data found or API error:', result.error);
       return;
     }
-    
+
     const enrichedData = result.data;
     console.log('[AuthCallback][ProfileEnrich] Got enriched data with confidence:', enrichedData.confidence);
-    
+
     // Save enriched profile to user_enriched_profiles table
     const { error: enrichError } = await supabase
       .from('user_enriched_profiles')
@@ -57,28 +57,28 @@ async function enrichUserProfile(userId: string, email: string, fullName: string
       }, {
         onConflict: 'user_id',
       });
-    
+
     if (enrichError) {
       console.error('[AuthCallback][ProfileEnrich] Error saving enriched profile:', enrichError);
       return;
     }
-    
+
     console.log('[AuthCallback][ProfileEnrich] Saved enriched profile to database');
-    
+
     // Pre-fill onboarding_data with mapped fields if confidence is good
     if (enrichedData.confidence >= 0.4) {
       const mappedFields = mapToOnboardingFields(enrichedData);
-      
+
       if (Object.keys(mappedFields).length > 0) {
         console.log('[AuthCallback][ProfileEnrich] Pre-filling onboarding with:', Object.keys(mappedFields));
-        
+
         // Check if onboarding record exists
         const { data: existingOnboarding } = await supabase
           .from('onboarding_data')
           .select('id')
           .eq('user_id', userId)
           .single();
-        
+
         if (existingOnboarding) {
           // Update existing record with AI-detected fields (only if not already filled)
           const { error: updateError } = await supabase
@@ -91,7 +91,7 @@ async function enrichUserProfile(userId: string, email: string, fullName: string
             .eq('user_id', userId)
             // Only update fields that are null/empty
             .is('citizenship_country', null);
-          
+
           if (updateError) {
             console.log('[AuthCallback][ProfileEnrich] Could not update onboarding (may already have data):', updateError.message);
           }
@@ -107,14 +107,14 @@ async function enrichUserProfile(userId: string, email: string, fullName: string
               current_step: 1,
               is_completed: false,
             });
-          
+
           if (insertError) {
             console.log('[AuthCallback][ProfileEnrich] Could not create onboarding:', insertError.message);
           }
         }
       }
     }
-    
+
     console.log('[AuthCallback][ProfileEnrich] Profile enrichment complete!');
   } catch (error) {
     console.error('[AuthCallback][ProfileEnrich] Exception during enrichment:', error);
@@ -138,8 +138,8 @@ const AuthCallback: React.FC = () => {
     if (customRedirect) {
       return customRedirect;
     }
-    // Otherwise, default behavior: onboarding or profile
-    return hasCompletedOnboarding ? '/hushh-user-profile' : '/onboarding/financial-link';
+    // Otherwise, default behavior: fundraising flow (replaces onboarding) or profile
+    return hasCompletedOnboarding ? '/hushh-user-profile' : '/questions/account_type';
   };
 
   const queueWelcomeToast = (userId?: string | null) => {
@@ -247,7 +247,7 @@ const AuthCallback: React.FC = () => {
           // This runs in the background and doesn't block the auth flow
           const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || '';
           if (fullName && user.email) {
-            enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => {});
+            enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => { });
           }
 
           // Proceed to success/redirect directly (no MFA check)
@@ -293,7 +293,7 @@ const AuthCallback: React.FC = () => {
             // This runs in the background and doesn't block the auth flow
             const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || '';
             if (fullName && user.email) {
-              enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => {});
+              enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => { });
             }
 
             // Proceed to success/redirect directly (no MFA check)

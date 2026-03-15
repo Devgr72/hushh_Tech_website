@@ -53,13 +53,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      const isFundraisingPageRoute = location.pathname.startsWith('/questions/') ||
+        location.pathname.startsWith('/reits/') ||
+        location.pathname.startsWith('/info/');
+
       const isOnOnboardingPage = location.pathname.startsWith('/onboarding/');
 
+      // The new workflow replaces old onboarding
       if (!onboardingData || !onboardingData.is_completed) {
-        if (!isOnOnboardingPage) {
-          // Resume from where user left off
-          const step = onboardingData?.current_step || 1;
-          navigate(`/onboarding/step-${step}`, { replace: true });
+        if (!isFundraisingPageRoute && !isOnOnboardingPage) {
+          navigate('/questions/account_type', { replace: true });
           return;
         }
       }

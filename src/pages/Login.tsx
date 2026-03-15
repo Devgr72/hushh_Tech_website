@@ -14,6 +14,9 @@ export default function Login() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [email, setEmail] = useState('neelesh@gmail.com');
+  const [password, setPassword] = useState('Neelesh2000@');
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Stable redirect path — computed once from URL params
   const redirectPath = React.useMemo(() => {
@@ -62,6 +65,25 @@ export default function Login() {
       setIsSigningIn(false);
     }
   }, [isSigningIn]);
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    setAuthError(null);
+    try {
+      if (config.supabaseClient) {
+        const { error } = await config.supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Failed to sign in');
+      setIsSigningIn(false);
+    }
+  };
 
   // Don't flash Login UI while checking auth
   if (isLoading) return null;
@@ -134,6 +156,43 @@ export default function Login() {
               <span className="text-[19px] font-medium ml-2">Continue with Google</span>
             </button>
           </div>
+
+          <div className="flex items-center my-6">
+            <div className="flex-1 border-t border-[#e5e5ea]"></div>
+            <span className="px-3 text-[13px] font-medium text-[#8e8e93] uppercase tracking-wider">or testing login</span>
+            <div className="flex-1 border-t border-[#e5e5ea]"></div>
+          </div>
+
+          <form onSubmit={handleEmailSignIn} className="flex flex-col gap-4">
+            {authError && (
+              <div className="p-3 bg-red-50 text-red-600 text-[14px] rounded-[10px] text-center">
+                {authError}
+              </div>
+            )}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              className="bg-white border border-[#e5e5ea] text-black rounded-[14px] h-[52px] w-full px-4 text-[17px] focus:outline-none focus:border-[#007aff] focus:ring-1 focus:ring-[#007aff] transition-colors"
+              required
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="bg-white border border-[#e5e5ea] text-black rounded-[14px] h-[52px] w-full px-4 text-[17px] focus:outline-none focus:border-[#007aff] focus:ring-1 focus:ring-[#007aff] transition-colors"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isSigningIn}
+              className="bg-[#0AADBC] text-white rounded-[14px] h-[52px] w-full flex items-center justify-center font-medium text-[19px] active:scale-[0.98] transition-transform duration-200 disabled:opacity-50"
+            >
+              {isSigningIn ? 'Logging in...' : 'Login with Email'}
+            </button>
+          </form>
 
           {/* Sign up link */}
           <div className="mt-8 text-center">
