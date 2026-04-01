@@ -214,7 +214,7 @@ export async function sendChatMessage(request: ChatRequest): Promise<ChatRespons
       parts: [{ text: msg.content }],
     }));
     
-    // Call the secure Vercel API endpoint
+    // Call the secure backend endpoint
     const response = await withRetry(async () => {
       const res = await fetch(API_ENDPOINT, {
         method: 'POST',

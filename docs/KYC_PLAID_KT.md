@@ -208,7 +208,8 @@ const result = await createSandboxTestItem(userId, 'ins_109508');
 ## 10. Important Notes
 
 1. **Plaid Dashboard Config Required**: Register redirect URIs in Plaid Dashboard:
-   - `https://www.hushhtech.com/onboarding/financial-link` (production)
+   - `https://hushhtech.com/onboarding/financial-link` (primary production)
+   - `https://www.hushhtech.com/onboarding/financial-link` (temporary compatibility during www cutover)
    - `http://localhost:5173/onboarding/financial-link` (dev)
 
 2. **Environment Variables** (Supabase Edge Functions):

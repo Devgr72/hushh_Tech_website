@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to update Supabase Auth URL Configuration
-# This fixes the redirect from hushh.ai to hushhtech.com
+# This keeps hushhtech.com as the canonical host while retaining www during cutover.
 
 # Colors for output
 RED='\033[0;31m'
@@ -73,14 +73,16 @@ else
     echo "3. Add these Redirect URLs:"
     echo "   - https://hushhtech.com/auth/callback"
     echo "   - https://hushhtech.com/auth/callback?redirect=/hushh-ai"
-    echo "   - https://www.hushhtech.com/auth/callback"
-    echo "   - https://www.hushhtech.com/auth/callback?redirect=/hushh-ai"
+    echo "   - https://www.hushhtech.com/auth/callback (temporary compatibility)"
+    echo "   - https://www.hushhtech.com/auth/callback?redirect=/hushh-ai (temporary compatibility)"
     echo "   - hushh://auth/callback"
     echo "   - https://hushhtech.com/**"
+    echo "   - https://www.hushhtech.com/** (temporary compatibility)"
     exit 1
 fi
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}OAuth redirect will now go to hushhtech.com${NC}"
+echo -e "${GREEN}OAuth redirect primary host is now hushhtech.com${NC}"
+echo -e "${GREEN}www.hushhtech.com remains in the allow list for cutover safety${NC}"
 echo -e "${GREEN}========================================${NC}"

@@ -27,6 +27,7 @@ MEMORY="512Mi"
 CPU="1"
 MIN_INSTANCES="0"
 MAX_INSTANCES="10"
+BUILD_SERVICE_ACCOUNT=""
 
 # ---------------------------------------------------------------------------
 # Parse arguments
@@ -38,8 +39,9 @@ while [[ $# -gt 0 ]]; do
     --service)   SERVICE_NAME="$2"; shift 2 ;;
     --local-build) LOCAL_BUILD=true; shift ;;
     --memory)    MEMORY="$2"; shift 2 ;;
+    --build-service-account) BUILD_SERVICE_ACCOUNT="$2"; shift 2 ;;
     --help|-h)
-      echo "Usage: $0 [--project PROJECT_ID] [--region REGION] [--service NAME] [--local-build] [--memory 512Mi]"
+      echo "Usage: $0 [--project PROJECT_ID] [--region REGION] [--service NAME] [--local-build] [--memory 512Mi] [--build-service-account EMAIL]"
       exit 0
       ;;
     *) echo "Unknown option: $1"; exit 1 ;;
@@ -64,6 +66,9 @@ echo "  Service:  $SERVICE_NAME"
 echo "  Region:   $REGION"
 echo "  Memory:   $MEMORY"
 echo "  CPU:      $CPU"
+if [[ -n "$BUILD_SERVICE_ACCOUNT" ]]; then
+  echo "  Build SA: $BUILD_SERVICE_ACCOUNT"
+fi
 echo "=============================================="
 
 # ---------------------------------------------------------------------------
@@ -94,7 +99,7 @@ echo ""
 echo "🔧 Step 2: Ensuring GCP APIs are enabled..."
 gcloud services enable run.googleapis.com \
   cloudbuild.googleapis.com \
-  containerregistry.googleapis.com \
+  artifactregistry.googleapis.com \
   --project="$PROJECT_ID" 2>/dev/null || true
 echo "✅ APIs enabled"
 
@@ -121,20 +126,28 @@ ENV_VARS="NODE_ENV=production"
 
 # Deploy using Cloud Run source deploy (builds in Cloud Build automatically)
 # Note: .gcloudignore ensures dist/ is included in the upload
-gcloud run deploy "$SERVICE_NAME" \
-  --source . \
-  --region "$REGION" \
-  --project "$PROJECT_ID" \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory "$MEMORY" \
-  --cpu "$CPU" \
-  --min-instances "$MIN_INSTANCES" \
-  --max-instances "$MAX_INSTANCES" \
-  --concurrency 250 \
-  --timeout 60s \
-  --set-env-vars "$ENV_VARS" \
+DEPLOY_ARGS=(
+  run deploy "$SERVICE_NAME"
+  --source .
+  --region "$REGION"
+  --project "$PROJECT_ID"
+  --platform managed
+  --allow-unauthenticated
+  --memory "$MEMORY"
+  --cpu "$CPU"
+  --min-instances "$MIN_INSTANCES"
+  --max-instances "$MAX_INSTANCES"
+  --concurrency 250
+  --timeout 60s
+  --set-env-vars "$ENV_VARS"
   --quiet
+)
+
+if [[ -n "$BUILD_SERVICE_ACCOUNT" ]]; then
+  DEPLOY_ARGS+=(--build-service-account "projects/$PROJECT_ID/serviceAccounts/$BUILD_SERVICE_ACCOUNT")
+fi
+
+gcloud "${DEPLOY_ARGS[@]}"
 
 # ---------------------------------------------------------------------------
 # Step 4: Get the service URL
@@ -154,13 +167,14 @@ echo "=============================================="
 echo ""
 echo "📌 Next steps:"
 echo "   1. Test: curl $SERVICE_URL"
-echo "   2. Map custom domain:"
+echo "   2. For production, prefer the HTTPS load balancer runbook in docs/HUSHH_TECH_GCP_CUTOVER.md"
+echo "   3. For a simple direct domain mapping (for example UAT), use:"
 echo "      gcloud run domain-mappings create \\"
 echo "        --service $SERVICE_NAME \\"
 echo "        --domain your-domain.com \\"
 echo "        --region $REGION"
 echo ""
-echo "   3. Set up CI/CD (optional):"
+echo "   4. Set up CI/CD (optional):"
 echo "      gcloud builds triggers create github \\"
 echo "        --repo-name=hushh_Tech_website \\"
 echo "        --repo-owner=hushh-labs \\"

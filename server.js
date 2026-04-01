@@ -2,7 +2,7 @@
  * Express Server for GCP Cloud Run
  * Serves the Vite SPA build + API routes
  * 
- * This replaces Vercel's hosting by combining:
+ * This runs the website on Cloud Run by combining:
  * - Static file serving (dist/)
  * - API serverless functions (api/)
  * - SPA fallback routing
@@ -19,6 +19,8 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 const DIST_DIR = join(__dirname, 'dist');
+const CANONICAL_HOST = 'hushhtech.com';
+const REDIRECT_HOSTS = new Set(['www.hushhtech.com']);
 
 // ---------------------------------------------------------------------------
 // Middleware
@@ -28,7 +30,7 @@ const DIST_DIR = join(__dirname, 'dist');
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Global security headers (mirrors vercel.json)
+// Global security headers for the website runtime
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -58,11 +60,29 @@ app.use((_req, res, next) => {
   next();
 });
 
+const getRequestHost = (req) => {
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const rawHost = Array.isArray(forwardedHost) ? forwardedHost[0] : (forwardedHost || req.headers.host || '');
+  return rawHost.split(',')[0].trim().replace(/:\d+$/, '').toLowerCase();
+};
+
+const isWellKnownPath = (pathname) => pathname === '/.well-known' || pathname.startsWith('/.well-known/');
+
+// Keep the apex domain canonical while still serving app-link files on www.
+app.use((req, res, next) => {
+  const host = getRequestHost(req);
+  if (REDIRECT_HOSTS.has(host) && !isWellKnownPath(req.path)) {
+    return res.redirect(308, `https://${CANONICAL_HOST}${req.originalUrl}`);
+  }
+
+  next();
+});
+
 // ---------------------------------------------------------------------------
-// API Routes — adapt Vercel handler(req, res) → Express route
+// API Routes — adapt existing handler(req, res) modules into Express routes
 // ---------------------------------------------------------------------------
 
-// Helper: wrap a Vercel-style handler into an Express route
+// Helper: wrap a serverless-style handler into an Express route
 const wrapHandler = (handlerModule) => async (req, res) => {
   try {
     const handler = handlerModule.default || handlerModule;

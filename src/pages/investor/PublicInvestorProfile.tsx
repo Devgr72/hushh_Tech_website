@@ -68,7 +68,7 @@ const PublicInvestorProfilePage: React.FC = () => {
         const data = await fetchPublicInvestorProfileBySlug(slug);
         setProfileData(data);
         
-        // Send profile view notification email via Vercel API (async, don't wait)
+        // Send profile view notification email via the website API (async, don't wait)
         fetch('/api/send-email-notification', {
           method: 'POST',
           headers: {

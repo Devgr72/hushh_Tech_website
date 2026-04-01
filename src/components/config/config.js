@@ -17,7 +17,7 @@ const config = {
   guestModeAccessToken: env?.VITE_GUEST_MODE_ACCESS_TOKEN || "",
   redirect_url:
     env?.VITE_SUPABASE_REDIRECT_URL ||
-    (typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "https://www.hushhtech.com/auth/callback"),
+    (typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "https://hushhtech.com/auth/callback"),
 };
 
 function createSupabaseClient() {

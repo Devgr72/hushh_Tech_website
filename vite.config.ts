@@ -48,7 +48,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Forward API calls to the serverless host in dev (vercel dev runs on 3000 by default)
+      // Forward API calls to the local API runner on port 3000 during development.
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
