@@ -22,9 +22,6 @@ port = 54323
 [functions.generate-investor-profile]
 verify_jwt = true
 
-[functions.shadow-investigator]
-verify_jwt = false
-
 # Auth Configuration - Fix redirect to hushhtech.com
 [auth]
 enabled = true
@@ -32,8 +29,12 @@ site_url = "https://hushhtech.com"
 additional_redirect_urls = [
   "https://hushhtech.com/auth/callback",
   "https://hushhtech.com/auth/callback?redirect=/hushh-ai",
+  "https://www.hushhtech.com/auth/callback",
+  "https://www.hushhtech.com/auth/callback?redirect=/hushh-ai",
   "https://hushhtech.com/**",
   "https://www.hushhtech.com/**",
+  "hushh://auth/callback",
+  "hushh://**",
   "ai.hushh.app://",
   "ai.hushh.app://**",
   "capacitor://localhost",

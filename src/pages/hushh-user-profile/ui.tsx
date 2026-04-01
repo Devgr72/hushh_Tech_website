@@ -39,7 +39,7 @@ const inlineInput = "text-right text-sm font-medium bg-transparent border-none f
 /* ── Page ── */
 const HushhUserProfilePage: React.FC = () => {
   const {
-    form, investorProfile, loading, loadingSeconds, isProcessing, investorStatus, shadowStatus,
+    form, investorProfile, loading, loadingSeconds, isProcessing, investorStatus,
     hasOnboardingData, isApplePassLoading, isGooglePassLoading, nwsResult, nwsLoading,
     hasCopied, onCopy, profileUrl, navigate,
     handleChange, handleBack, handleSave,
@@ -47,7 +47,6 @@ const HushhUserProfilePage: React.FC = () => {
     handleAppleWalletPass, handleGoogleWalletPass, COUNTRIES,
     editingField, setEditingField, FIELD_OPTIONS, MULTI_SELECT_FIELDS,
     handleUpdateAIField, handleMultiSelectToggle, getConfidenceLabel, getConfidenceBadgeClass,
-    shadowProfile, shadowConfidenceLabel, shadowLifestyleTags, shadowBrandTags, shadowKnownForTags,
   } = useHushhUserProfileLogic();
 
   const firstName = form.name?.split(" ")[0] || "Investor";
@@ -118,16 +117,6 @@ const HushhUserProfilePage: React.FC = () => {
                    investorStatus === 'done' ? 'Ready ✓' : investorStatus === 'error' ? 'Failed' : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Shadow Profile</span>
-                <span className={`text-[10px] uppercase tracking-widest font-medium ${
-                  shadowStatus === 'running' ? 'text-gray-400' :
-                  shadowStatus === 'done' ? 'text-ios-green' : 'text-red-500'
-                }`}>
-                  {shadowStatus === 'running' ? 'Analyzing...' :
-                   shadowStatus === 'done' ? 'Ready ✓' : shadowStatus === 'error' ? 'Failed' : '—'}
-                </span>
-              </div>
             </div>
           </section>
         )}
@@ -144,7 +133,7 @@ const HushhUserProfilePage: React.FC = () => {
             Hushh AI automatically detects your investment preferences and risk
             appetite to tailor opportunities specifically for you.
           </p>
-          <HushhTechCta variant={HushhTechCtaVariant.BLACK} onClick={handleSave} disabled={loading}>
+          <HushhTechCta variant={HushhTechCtaVariant.BLACK} onClick={handleSave} disabled={loading || isProcessing}>
             {loading
               ? `Generating... ${loadingSeconds}s`
               : investorProfile
@@ -251,85 +240,6 @@ const HushhUserProfilePage: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
-          </section>
-        )}
-
-        {/* ── Deep Profile Intelligence ── */}
-        {shadowProfile && (
-          <section className="mb-12">
-            <div className="mb-8">
-              <h2 className="text-2xl font-medium text-black tracking-tight mb-2 font-serif" style={playfair}>
-                Deep{" "}
-                <span className="text-gray-400 italic font-light">Intelligence.</span>
-              </h2>
-              <p className="text-gray-500 text-xs leading-relaxed">
-                Insights gathered by our Shadow Investigator AI.
-              </p>
-            </div>
-
-            <div className="py-1">
-              <SectionLabel>Identity</SectionLabel>
-              {shadowProfile.occupation && (
-                <FieldRow label="Occupation">
-                  <span className="text-sm font-medium text-black">{shadowProfile.occupation}</span>
-                </FieldRow>
-              )}
-              {shadowProfile.nationality && (
-                <FieldRow label="Nationality">
-                  <span className="text-sm font-medium text-black">{shadowProfile.nationality}</span>
-                </FieldRow>
-              )}
-              {shadowProfile.netWorthScore > 0 && (
-                <FieldRow label="Wealth Score">
-                  <span className="text-sm font-medium text-black">{shadowProfile.netWorthScore}/100</span>
-                </FieldRow>
-              )}
-            </div>
-
-            {/* Lifestyle */}
-            {shadowLifestyleTags.length > 0 && (
-              <div className="py-4">
-                <SectionLabel>Lifestyle</SectionLabel>
-                <div className="flex flex-wrap gap-2">
-                  {shadowLifestyleTags.map((tag, i) => (
-                    <span key={i} className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-700 bg-gray-50">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Brands */}
-            {shadowBrandTags.length > 0 && (
-              <div className="py-4">
-                <SectionLabel>Brands</SectionLabel>
-                <div className="flex flex-wrap gap-2">
-                  {shadowBrandTags.map((brand, i) => (
-                    <span key={i} className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-700 bg-gray-50">{brand}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Known For */}
-            {shadowKnownForTags.length > 0 && (
-              <div className="py-4">
-                <SectionLabel>Known For</SectionLabel>
-                {shadowKnownForTags.map((item, i) => (
-                  <FieldRow key={i} label={`#${i + 1}`}>
-                    <span className="text-sm font-medium text-black">{item}</span>
-                  </FieldRow>
-                ))}
-              </div>
-            )}
-
-            {/* Confidence */}
-            <div className="border-t border-gray-100 mt-2 pt-4 flex items-center justify-between">
-              <span className="text-sm text-gray-500 font-light">AI Confidence</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 bg-gray-50">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                <span className="text-[10px] tracking-[0.14em] uppercase text-gray-500 font-medium">{shadowConfidenceLabel}</span>
-              </span>
             </div>
           </section>
         )}

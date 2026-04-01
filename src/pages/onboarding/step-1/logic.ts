@@ -6,6 +6,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import config from '../../../resources/config/config';
 import { upsertOnboardingData } from '../../../services/onboarding/upsertOnboardingData';
+import { TOTAL_VISIBLE_ONBOARDING_STEPS } from '../../../services/onboarding/flow';
 import { useFooterVisibility } from '../../../utils/useFooterVisibility';
 
 /* ─── Types & Constants ─── */
@@ -28,7 +29,7 @@ export const SHARE_CLASSES: ShareClass[] = [
     description: 'Standard tier with full access to AI-powered multi-strategy alpha.' },
 ];
 
-export const TOTAL_STEPS = 12;
+export const TOTAL_STEPS = TOTAL_VISIBLE_ONBOARDING_STEPS;
 export const MIN_RECURRING_AMOUNT = 100;
 export const MAX_RECURRING_AMOUNT = 100000000;
 
@@ -70,7 +71,6 @@ export interface Step1Logic {
   totalInvestment: number;
   hasSelection: boolean;
   recurringEnabled: boolean;
-  toggleRecurring: () => void;
   handleUnitChange: (classId: string, delta: number) => void;
   handleAmountClick: (amount: number) => void;
   handleCustomAmountChange: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -93,8 +93,8 @@ export const useStep1Logic = (): Step1Logic => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [customAmountError, setCustomAmountError] = useState<string | null>(null);
-  /* Recurring investment toggle — user can enable/disable */
-  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  /* Recurring investment is compulsory — always enabled */
+  const recurringEnabled = true;
 
   const totalInvestment = SHARE_CLASSES.reduce((t, sc) => t + units[sc.id] * sc.unitPrice, 0);
   const hasSelection = Object.values(units).some((c) => c > 0);
@@ -132,15 +132,11 @@ export const useStep1Logic = (): Step1Logic => {
 
       const { data: onboardingData } = await config.supabaseClient
         .from('onboarding_data')
-        .select('class_a_units, class_b_units, class_c_units, recurring_investment_enabled, recurring_frequency, recurring_day_of_month, recurring_amount')
+        .select('class_a_units, class_b_units, class_c_units, recurring_frequency, recurring_day_of_month, recurring_amount')
         .eq('user_id', user.id).maybeSingle();
 
       if (onboardingData) {
         setUnits({ class_a: onboardingData.class_a_units || 0, class_b: onboardingData.class_b_units || 0, class_c: onboardingData.class_c_units || 0 });
-        /* Restore recurring toggle state from DB */
-        if (onboardingData.recurring_investment_enabled) {
-          setRecurringEnabled(true);
-        }
         if (onboardingData.recurring_frequency) {
           const freqMap: Record<string, RecurringFrequency> = {
             once_a_month: 'once_a_month', twice_a_month: 'twice_a_month',
@@ -166,22 +162,6 @@ export const useStep1Logic = (): Step1Logic => {
   /* Handlers */
   const handleUnitChange = (classId: string, delta: number) => {
     setUnits((prev) => ({ ...prev, [classId]: Math.max(0, prev[classId] + delta) }));
-  };
-
-  /* Toggle recurring investment on/off — resets selections when turned off */
-  const toggleRecurring = () => {
-    setRecurringEnabled((prev) => {
-      if (prev) {
-        /* Turning OFF — clear recurring selections */
-        setSelectedAmount(null);
-        setCustomAmount('');
-        setCustomAmountError(null);
-        setFrequency('once_a_month');
-        setInvestmentDay('1st of the month');
-        setError(null);
-      }
-      return !prev;
-    });
   };
 
   const handleAmountClick = (amount: number) => {
@@ -234,7 +214,6 @@ export const useStep1Logic = (): Step1Logic => {
         selected_fund: 'hushh_fund_a', class_a_units: units.class_a,
         class_b_units: units.class_b, class_c_units: units.class_c,
         initial_investment_amount: totalInvestment, current_step: 1,
-        recurring_investment_enabled: recurringEnabled,
         updated_at: new Date().toISOString(),
       };
       if (recurringEnabled && recurringAmount > 0) {
@@ -260,7 +239,7 @@ export const useStep1Logic = (): Step1Logic => {
   return {
     units, frequency, investmentDay, selectedAmount, customAmount, customAmountError,
     error, isLoading, isFooterVisible, totalInvestment, hasSelection,
-    recurringEnabled, toggleRecurring,
+    recurringEnabled,
     handleUnitChange, handleAmountClick, handleCustomAmountChange,
     setFrequency, setInvestmentDay, handleNext, handleBack,
   };

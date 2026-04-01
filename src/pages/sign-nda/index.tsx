@@ -10,10 +10,10 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@chakra-ui/react';
 import config from '../../resources/config/config';
 import { signNDA, sendNDANotification, generateNDAPdf, uploadSignedNDA } from '../../services/nda/ndaService';
+import { resolveSignNDASession } from './sessionBootstrap';
 import HushhTechHeader from '../../components/hushh-tech-header/HushhTechHeader';
 import HushhTechFooter from '../../components/hushh-tech-footer/HushhTechFooter';
 import HushhTechCta, { HushhTechCtaVariant } from '../../components/hushh-tech-cta/HushhTechCta';
-import { isPrivateRelayEmail, getEffectiveEmail } from '../../utils/emailUtils';
 
 /* ── Fund documents config ── */
 const FUND_DOCUMENTS = [
@@ -89,8 +89,6 @@ const SignNDAPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [realEmail, setRealEmail] = useState('');
-  const [isRelayUser, setIsRelayUser] = useState(false);
 
   /* Track which fund documents have been acknowledged */
   const [docAcknowledged, setDocAcknowledged] = useState<Record<string, boolean>>(
@@ -103,61 +101,60 @@ const SignNDAPage: React.FC = () => {
   /* Derived: all documents acknowledged? */
   const allDocsAcknowledged = FUND_DOCUMENTS.every((d) => docAcknowledged[d.id]);
 
-  /* For relay users, require real email. For normal users, no extra check. */
-  const hasValidEmail = isRelayUser ? realEmail.trim().includes('@') && !isPrivateRelayEmail(realEmail) : true;
-
   /* Can submit? */
-  const canSubmit = agreedToTerms && allDocsAcknowledged && signerName.trim().length >= 2 && hasValidEmail && !isSubmitting;
-
-  /* Effective email for NDA PDF & notifications */
-  const effectiveEmail = isRelayUser && realEmail.trim() ? realEmail.trim() : (userEmail || 'unknown@email.com');
+  const canSubmit = agreedToTerms && allDocsAcknowledged && signerName.trim().length >= 2 && !isSubmitting;
 
   /* Cleanup on unmount */
   useEffect(() => {
+    isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
   }, []);
 
   /* Auth lifecycle */
   useEffect(() => {
-    if (!config.supabaseClient) {
-      if (isMountedRef.current) setIsLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    const {
-      data: { subscription },
-    } = config.supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMountedRef.current) return;
+    const bootstrapSession = async () => {
+      const result = await resolveSignNDASession(config.supabaseClient);
 
-      if (!session?.user) {
-        navigate('/login', { replace: true });
+      if (cancelled || !isMountedRef.current) {
         return;
       }
 
-      setUserId(session.user.id);
-      setUserEmail(session.user.email || null);
+      if (result.session?.user) {
+        const { user } = result.session;
 
-      /* Detect Apple Private Relay email */
-      const isRelay = isPrivateRelayEmail(session.user.email);
-      setIsRelayUser(isRelay);
+        setUserId(user.id);
+        setUserEmail(user.email || null);
 
-      /* Pre-fill real email from metadata if previously saved */
-      const savedRealEmail = session.user.user_metadata?.real_email as string;
-      if (savedRealEmail && isRelay) {
-        setRealEmail(savedRealEmail);
+        const fullName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          '';
+
+        if (fullName) {
+          setSignerName((currentName) => currentName || fullName);
+        }
+
+        setIsLoading(false);
+        return;
       }
 
-      const fullName =
-        session.user.user_metadata?.full_name ||
-        session.user.user_metadata?.name || '';
-      if (fullName && !signerName) {
-        setSignerName(fullName);
+      if (result.source === 'error' && result.error) {
+        console.error('[SignNDA] Failed to bootstrap session:', result.error);
+      } else if (result.source === 'timeout') {
+        console.warn('[SignNDA] Timed out waiting for session hydration');
       }
 
       setIsLoading(false);
-    });
+      navigate('/login', { replace: true });
+    };
 
-    return () => subscription?.unsubscribe();
+    void bootstrapSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   /* Toggle individual document acknowledgment */
@@ -171,6 +168,13 @@ const SignNDAPage: React.FC = () => {
     a.href = url;
     a.download = name;
     a.click();
+  }, []);
+
+  const handleReadDocument = useCallback((url: string, title: string) => {
+    const readerUrl = new URL('/document-viewer', window.location.origin);
+    readerUrl.searchParams.set('src', url);
+    readerUrl.searchParams.set('title', title);
+    window.open(readerUrl.toString(), '_blank', 'noopener,noreferrer');
   }, []);
 
   const validateForm = useCallback((): boolean => {
@@ -251,7 +255,7 @@ const SignNDAPage: React.FC = () => {
           const pdfResult = await generateNDAPdf(
             {
               signerName: trimmedName,
-              signerEmail: effectiveEmail,
+              signerEmail: userEmail || 'unknown@email.com',
               signedAt: new Date().toISOString(),
               ndaVersion: 'v1.0',
               userId,
@@ -279,16 +283,9 @@ const SignNDAPage: React.FC = () => {
         /* Build list of acknowledged documents for notification */
         const acknowledgedDocs = FUND_DOCUMENTS.map((d) => d.fullName);
 
-        /* Save real email to user_metadata for future use (non-blocking) */
-        if (isRelayUser && realEmail.trim()) {
-          config.supabaseClient.auth.updateUser({
-            data: { real_email: realEmail.trim() },
-          }).catch((err: unknown) => console.warn('[SignNDA] Failed to save real email:', err));
-        }
-
         sendNDANotification(
           trimmedName,
-          effectiveEmail,
+          userEmail || 'unknown@email.com',
           result.signedAt || new Date().toISOString(),
           result.ndaVersion || 'v1.0',
           generatedPdfUrl,
@@ -352,7 +349,7 @@ const SignNDAPage: React.FC = () => {
       <main className="px-6 flex-grow max-w-md mx-auto w-full pb-32">
         {/* ── Icon + Title ── */}
         <section className="pt-12 pb-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-black flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-hushh-blue flex items-center justify-center">
             <span
               className="material-symbols-outlined text-white text-3xl"
               style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}
@@ -455,7 +452,7 @@ const SignNDAPage: React.FC = () => {
                       : 'border-gray-200 bg-white'
                   }`}
                 >
-                  {/* Top row: icon + name + download */}
+                  {/* Top row: icon + name + actions */}
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                       <span
@@ -473,16 +470,28 @@ const SignNDAPage: React.FC = () => {
                         {doc.description}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(doc.url, `${doc.fullName}.docx`)}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[11px] font-medium hover:bg-black/80 transition-colors"
-                      aria-label={`Download ${doc.name}`}
-                      tabIndex={0}
-                    >
-                      <span className="material-symbols-outlined text-sm">download</span>
-                      Download
-                    </button>
+                    <div className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleReadDocument(doc.url, doc.name)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-[11px] font-medium hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                        aria-label={`Read ${doc.name}`}
+                        tabIndex={0}
+                      >
+                        <span className="material-symbols-outlined text-sm">menu_book</span>
+                        Read
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(doc.url, `${doc.fullName}.docx`)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[11px] font-medium hover:bg-black/80 transition-colors"
+                        aria-label={`Download ${doc.name}`}
+                        tabIndex={0}
+                      >
+                        <span className="material-symbols-outlined text-sm">download</span>
+                        Download
+                      </button>
+                    </div>
                   </div>
 
                   {/* Acknowledge checkbox */}
@@ -524,10 +533,10 @@ const SignNDAPage: React.FC = () => {
             Step 3 · Digital Signature
           </h3>
 
-          {/* Name input — prominent editable field */}
+          {/* Name input */}
           <div className="border border-gray-200 mb-2">
-            <div className="px-4 py-4 border-b border-gray-100">
-              <label className="text-sm font-semibold text-gray-900 block mb-2">
+            <div className="flex items-center px-4 py-4 border-b border-gray-100">
+              <label className="text-sm font-semibold text-gray-900 shrink-0 mr-4">
                 Full Legal Name
               </label>
               <input
@@ -537,19 +546,9 @@ const SignNDAPage: React.FC = () => {
                   setSignerName(e.target.value);
                   if (nameError) setNameError('');
                 }}
-                placeholder="e.g., John Smith"
-                className={`w-full px-3 py-2.5 text-sm font-medium text-black rounded-lg border outline-none transition-colors ${
-                  signerName.trim()
-                    ? 'border-green-300 bg-green-50/30 focus:border-black focus:ring-1 focus:ring-black'
-                    : 'border-gray-300 bg-gray-50 focus:border-black focus:ring-1 focus:ring-black placeholder:text-gray-400'
-                }`}
-                aria-label="Enter your full legal name"
+                placeholder="required"
+                className="flex-1 text-right text-sm font-medium text-black placeholder:text-gray-400 bg-transparent outline-none"
               />
-              {!signerName.trim() && !nameError && (
-                <p className="text-[11px] text-gray-400 mt-1.5">
-                  Type your full legal name as it appears on your ID
-                </p>
-              )}
             </div>
             {nameError && (
               <p className="px-4 py-2 text-xs text-red-600 font-medium">{nameError}</p>
@@ -583,36 +582,8 @@ const SignNDAPage: React.FC = () => {
             )}
           </div>
 
-          {/* ── Apple Private Relay: Real email input ── */}
-          {isRelayUser && (
-            <div className="mt-4 border border-amber-200 bg-amber-50/50 rounded-xl p-4">
-              <div className="flex items-start gap-2 mb-3">
-                <span className="material-symbols-outlined text-amber-600 text-lg shrink-0 mt-0.5">mail</span>
-                <div>
-                  <p className="text-xs font-semibold text-amber-800">
-                    Apple hid your email
-                  </p>
-                  <p className="text-[11px] text-amber-600 mt-0.5 leading-relaxed">
-                    For legal NDA documents, please provide your real email address.
-                  </p>
-                </div>
-              </div>
-              <input
-                type="email"
-                value={realEmail}
-                onChange={(e) => setRealEmail(e.target.value)}
-                placeholder="your.real@email.com"
-                className="w-full px-3 py-2.5 text-sm border border-amber-200 rounded-lg bg-white outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-gray-400"
-                aria-label="Your real email address"
-              />
-              {realEmail && !hasValidEmail && (
-                <p className="text-[11px] text-red-500 mt-1.5">Please enter a valid, non-relay email address.</p>
-              )}
-            </div>
-          )}
-
           {/* Signing as info */}
-          {(userEmail || effectiveEmail) && (
+          {userEmail && (
             <div className="flex items-center justify-center gap-1.5 mt-3">
               <span
                 className="material-symbols-outlined text-gray-400 text-base"
@@ -622,22 +593,18 @@ const SignNDAPage: React.FC = () => {
               </span>
               <p className="text-xs text-gray-500">
                 Signing as{' '}
-                <span className="text-black font-semibold">
-                  {isRelayUser && realEmail.trim() ? realEmail.trim() : userEmail}
-                </span>
+                <span className="text-black font-semibold">{userEmail}</span>
               </p>
             </div>
           )}
         </section>
 
-        {/* ── Validation hints — always visible when incomplete ── */}
-        {!canSubmit && !isSubmitting && (
+        {/* ── Validation hint when not ready ── */}
+        {!canSubmit && signerName.trim().length >= 2 && (
           <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs text-amber-700 leading-relaxed space-y-1">
-              {signerName.trim().length < 2 && <span className="block">⚠ Please enter your full legal name above.</span>}
-              {!allDocsAcknowledged && <span className="block">⚠ Please acknowledge all fund documents above.</span>}
-              {!agreedToTerms && <span className="block">⚠ Please agree to the NDA terms.</span>}
-              {isRelayUser && !hasValidEmail && <span className="block">⚠ Please enter your real email address.</span>}
+            <p className="text-xs text-amber-700 leading-relaxed">
+              {!allDocsAcknowledged && '⚠ Please acknowledge all fund documents above. '}
+              {!agreedToTerms && '⚠ Please agree to the NDA terms.'}
             </p>
           </div>
         )}

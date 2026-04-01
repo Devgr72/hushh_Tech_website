@@ -6,11 +6,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import config from '../../../resources/config/config';
 import { upsertOnboardingData } from '../../../services/onboarding/upsertOnboardingData';
+import { TOTAL_VISIBLE_ONBOARDING_STEPS } from '../../../services/onboarding/flow';
 import type { ReferralSource } from '../../../types/onboarding';
 import { useFooterVisibility } from '../../../utils/useFooterVisibility';
 
 export const CURRENT_STEP = 2;
-export const TOTAL_STEPS = 12;
+export const TOTAL_STEPS = TOTAL_VISIBLE_ONBOARDING_STEPS;
 export const PROGRESS_PCT = Math.round((CURRENT_STEP / TOTAL_STEPS) * 100);
 
 export interface ReferralOption {
@@ -60,14 +61,14 @@ export const useStep2Logic = (): Step2Logic => {
   const handleContinue = async () => {
     if (!userId || !config.supabaseClient || !selectedSource) return;
     setIsLoading(true);
-    try { await upsertOnboardingData(userId, { referral_source: selectedSource, current_step: 2 }); navigate('/onboarding/step-4'); }
+    try { await upsertOnboardingData(userId, { referral_source: selectedSource, current_step: 2 }); navigate('/onboarding/step-3'); }
     catch (error) { console.error('Error:', error); }
     finally { setIsLoading(false); }
   };
 
   const handleSkip = async () => {
     if (userId) { try { await upsertOnboardingData(userId, { current_step: 2 }); } catch (e) { console.error('Error:', e); } }
-    navigate('/onboarding/step-4');
+    navigate('/onboarding/step-3');
   };
 
   const handleBack = () => navigate('/onboarding/step-1');

@@ -3,125 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Box, Container, Heading, Text, Spinner, Button, Flex, Icon, Alert, AlertIcon } from '@chakra-ui/react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import config from '../resources/config/config';
-import { searchProfile, mapToOnboardingFields } from '../services/profileSearch';
-import { isPrivateRelayEmail } from '../utils/emailUtils';
-
-
-// Helper function to enrich user profile in background (non-blocking)
-async function enrichUserProfile(userId: string, email: string, fullName: string, supabase: any) {
-  try {
-    console.log('[AuthCallback][ProfileEnrich] Starting profile enrichment for:', fullName);
-    
-    // Call the AI-powered profile search API
-    const result = await searchProfile({ 
-      name: fullName, 
-      email: email 
-    });
-    
-    if (!result.success || !result.data) {
-      console.log('[AuthCallback][ProfileEnrich] No profile data found or API error:', result.error);
-      return;
-    }
-    
-    const enrichedData = result.data;
-    console.log('[AuthCallback][ProfileEnrich] Got enriched data with confidence:', enrichedData.confidence);
-    
-    // Save enriched profile to user_enriched_profiles table
-    const { error: enrichError } = await supabase
-      .from('user_enriched_profiles')
-      .upsert({
-        user_id: userId,
-        age: enrichedData.age || null,
-        dob: enrichedData.dob || null,
-        address: enrichedData.address || null,
-        phone: enrichedData.phone || null,
-        occupation: enrichedData.occupation || null,
-        nationality: enrichedData.nationality || null,
-        marital_status: enrichedData.maritalStatus || null,
-        preferences: enrichedData.preferences || null,
-        confidence: enrichedData.confidence || 0,
-        net_worth_score: enrichedData.netWorthScore || 0,
-        net_worth_context: enrichedData.netWorthContext || null,
-        sources: enrichedData.sources || [],
-        field_sources: {
-          // Track which fields are AI-detected vs user-provided
-          age: 'ai_detected',
-          dob: 'ai_detected',
-          address: 'ai_detected',
-          phone: 'ai_detected',
-          occupation: 'ai_detected',
-          nationality: 'ai_detected',
-          marital_status: 'ai_detected',
-          preferences: 'ai_detected',
-        },
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id',
-      });
-    
-    if (enrichError) {
-      console.error('[AuthCallback][ProfileEnrich] Error saving enriched profile:', enrichError);
-      return;
-    }
-    
-    console.log('[AuthCallback][ProfileEnrich] Saved enriched profile to database');
-    
-    // Pre-fill onboarding_data with mapped fields if confidence is good
-    if (enrichedData.confidence >= 0.4) {
-      const mappedFields = mapToOnboardingFields(enrichedData);
-      
-      if (Object.keys(mappedFields).length > 0) {
-        console.log('[AuthCallback][ProfileEnrich] Pre-filling onboarding with:', Object.keys(mappedFields));
-        
-        // Check if onboarding record exists
-        const { data: existingOnboarding } = await supabase
-          .from('onboarding_data')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
-        
-        if (existingOnboarding) {
-          // Update existing record with AI-detected fields (only if not already filled)
-          const { error: updateError } = await supabase
-            .from('onboarding_data')
-            .update({
-              ...mappedFields,
-              ai_prefilled: true,
-              ai_prefilled_at: new Date().toISOString(),
-            })
-            .eq('user_id', userId)
-            // Only update fields that are null/empty
-            .is('citizenship_country', null);
-          
-          if (updateError) {
-            console.log('[AuthCallback][ProfileEnrich] Could not update onboarding (may already have data):', updateError.message);
-          }
-        } else {
-          // Create new onboarding record with AI-detected fields
-          const { error: insertError } = await supabase
-            .from('onboarding_data')
-            .insert({
-              user_id: userId,
-              ...mappedFields,
-              ai_prefilled: true,
-              ai_prefilled_at: new Date().toISOString(),
-              current_step: 1,
-              is_completed: false,
-            });
-          
-          if (insertError) {
-            console.log('[AuthCallback][ProfileEnrich] Could not create onboarding:', insertError.message);
-          }
-        }
-      }
-    }
-    
-    console.log('[AuthCallback][ProfileEnrich] Profile enrichment complete!');
-  } catch (error) {
-    console.error('[AuthCallback][ProfileEnrich] Exception during enrichment:', error);
-    // Non-blocking - don't throw, just log
-  }
-}
+import { DEFAULT_AUTH_REDIRECT, sanitizeInternalRedirect } from '../utils/security';
 
 
 const AuthCallback: React.FC = () => {
@@ -131,14 +13,15 @@ const AuthCallback: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Get custom redirect from URL param (for Hushh AI and other modules)
-  const customRedirect = searchParams.get('redirect');
+  const redirectParam = searchParams.get('redirect');
+  const customRedirect = redirectParam
+    ? sanitizeInternalRedirect(redirectParam, DEFAULT_AUTH_REDIRECT)
+    : null;
 
   // Helper to determine final redirect destination
   const getRedirectDestination = (hasCompletedOnboarding: boolean) => {
     // If custom redirect is set (e.g., /hushh-ai), use it
-    if (customRedirect) {
-      return customRedirect;
-    }
+    if (customRedirect) return customRedirect;
     // Otherwise, default behavior: onboarding or profile
     return hasCompletedOnboarding ? '/hushh-user-profile' : '/onboarding/financial-link';
   };
@@ -244,18 +127,6 @@ const AuthCallback: React.FC = () => {
             .eq('user_id', user.id)
             .single() || { data: null };
 
-          // 🚀 Fire-and-forget: Enrich user profile with AI-powered web intelligence
-          // This runs in the background and doesn't block the auth flow
-          // For Apple Private Relay emails, don't use email prefix as name (it's garbage like "abc123")
-          const isRelay = isPrivateRelayEmail(user.email);
-          const fullName = user.user_metadata?.full_name || (isRelay ? '' : (user.email?.split('@')[0] || ''));
-          if (fullName && user.email && !isRelay) {
-            enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => {});
-          } else if (fullName && user.email) {
-            // Relay user with real name from metadata — still enrich but skip email-based search
-            enrichUserProfile(user.id, '', fullName, supabase).catch(() => {});
-          }
-
           // Proceed to success/redirect directly (no MFA check)
           queueWelcomeToast(user.id);
           setVerificationStatus('success');
@@ -294,17 +165,6 @@ const AuthCallback: React.FC = () => {
               .eq('user_id', user.id)
               .maybeSingle(); // Use maybeSingle() to handle cases where no record exists
             console.info('[Hushh][AuthCallback] Session restored', { userId: user.id, email: user.email, onboardingFound: !!onboardingData });
-
-            // 🚀 Fire-and-forget: Enrich user profile with AI-powered web intelligence
-            // This runs in the background and doesn't block the auth flow
-            // For Apple Private Relay emails, don't use email prefix as name (it's garbage like "abc123")
-            const isRelayOAuth = isPrivateRelayEmail(user.email);
-            const fullName = user.user_metadata?.full_name || (isRelayOAuth ? '' : (user.email?.split('@')[0] || ''));
-            if (fullName && user.email && !isRelayOAuth) {
-              enrichUserProfile(user.id, user.email, fullName, supabase).catch(() => {});
-            } else if (fullName && user.email) {
-              enrichUserProfile(user.id, '', fullName, supabase).catch(() => {});
-            }
 
             // Proceed to success/redirect directly (no MFA check)
             console.log('[AuthCallback] Proceeding to redirect (2FA disabled)');

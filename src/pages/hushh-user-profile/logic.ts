@@ -11,11 +11,10 @@ import { generateInvestorProfile } from '../../services/investorProfile/apiClien
 import { downloadHushhGoldPass, launchGoogleWalletPass } from '../../services/walletPass';
 import { InvestorProfile, FIELD_LABELS, VALUE_LABELS } from '../../types/investorProfile';
 import { calculateNWSFromDB, NWSResult } from '../../services/networkScore/calculateNWS';
-import { invokeShadowInvestigator, formatPhoneContact, ShadowProfile, SHADOW_FIELD_LABELS } from '../../services/shadowInvestigator';
 
 // Re-export types for UI
-export type { InvestorProfile, NWSResult, ShadowProfile };
-export { FIELD_LABELS, VALUE_LABELS, SHADOW_FIELD_LABELS, formatPhoneContact };
+export type { InvestorProfile, NWSResult };
+export { FIELD_LABELS, VALUE_LABELS };
 
 // Complete country list matching Step 6 onboarding - using full country names
 const COUNTRIES = [
@@ -109,8 +108,7 @@ export const useHushhUserProfileLogic = () => {
   // Per-API status for non-blocking background processing
   type ApiStatus = 'idle' | 'running' | 'done' | 'error';
   const [investorStatus, setInvestorStatus] = useState<ApiStatus>('idle');
-  const [shadowStatus, setShadowStatus] = useState<ApiStatus>('idle');
-  const isProcessing = investorStatus === 'running' || shadowStatus === 'running';
+  const isProcessing = investorStatus === 'running';
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const [isApplePassLoading, setIsApplePassLoading] = useState(false);
   const [isGooglePassLoading, setIsGooglePassLoading] = useState(false);
@@ -120,9 +118,6 @@ export const useHushhUserProfileLogic = () => {
   // Dirty tracking for AI profile field edits (separate from form edits)
   const [isAiProfileDirty, setIsAiProfileDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  // Shadow Investigator state
-  const [shadowProfile, setShadowProfile] = useState<ShadowProfile | null>(null);
-  const [shadowLoading, setShadowLoading] = useState(false);
   // NWS Score state
   const [nwsResult, setNwsResult] = useState<NWSResult | null>(null);
   const [nwsLoading, setNwsLoading] = useState(true);
@@ -132,6 +127,9 @@ export const useHushhUserProfileLogic = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     setLoadingSeconds(0);
     timerRef.current = setInterval(() => setLoadingSeconds((s) => s + 1), 1000);
   }, []);
@@ -141,8 +139,22 @@ export const useHushhUserProfileLogic = () => {
     setLoadingSeconds(0);
   }, []);
 
-  // Cleanup timer on unmount
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  useEffect(() => {
+    if (investorStatus !== 'running') {
+      if (timerRef.current) {
+        stopTimer();
+      }
+      if (loading) {
+        setLoading(false);
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [investorStatus, loading, stopTimer]);
 
   // Field options for AI-generated profile editing
   const FIELD_OPTIONS: Record<string, { value: string; label: string }[]> = {
@@ -329,12 +341,7 @@ export const useHushhUserProfileLogic = () => {
           // Load AI-generated profile if available
           if (existingProfile.investor_profile) {
             setInvestorProfile(existingProfile.investor_profile);
-          }
-
-          // Load shadow profile if available (for data consistency when sharing)
-          if (existingProfile.shadow_profile) {
-            setShadowProfile(existingProfile.shadow_profile);
-            console.log('[Profile] Loaded cached shadow profile from Supabase');
+            setInvestorStatus('done');
           }
           
           // Prefill form from investor_profiles table
@@ -520,19 +527,11 @@ export const useHushhUserProfileLogic = () => {
     }
   };
 
-  // Check if both APIs finished — stop timer when both are done
-  const checkAllDone = (invStatus: ApiStatus, shdStatus: ApiStatus) => {
-    if (invStatus !== 'running' && shdStatus !== 'running') {
-      stopTimer();
-      setLoading(false);
-    }
-  };
-
   /**
    * handleSubmit — NON-BLOCKING background processing
-   * Fires both APIs independently. Each updates state when it completes.
+   * Fires investor profile generation in the background.
    * User can scroll, edit, navigate while APIs run in background.
-   * No timeout — these are heavy APIs that take as long as they need.
+   * No timeout — this is a heavy API that takes as long as it needs.
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,7 +560,6 @@ export const useHushhUserProfileLogic = () => {
     // ── Start background processing ──
     setLoading(true);
     setInvestorStatus('running');
-    setShadowStatus('running');
     startTimer();
 
     toast({
@@ -596,48 +594,8 @@ export const useHushhUserProfileLogic = () => {
       setInvestorStatus('error');
       console.error("[Profile] Investor profile exception:", err);
       toast({ title: "Investor profile failed", description: "Network error — will retry later", status: "warning", duration: 4000 });
-    }).finally(() => {
-      // Use actual investor status (done or error) to check completion
-      setInvestorStatus((invActual) => {
-        setShadowStatus((shdActual) => { checkAllDone(invActual, shdActual); return shdActual; });
-        return invActual;
-      });
     });
 
-    // ── API 2: Shadow Investigator (fire-and-forget) ──
-    invokeShadowInvestigator({
-      name: form.name,
-      email: form.email,
-      contact: formatPhoneContact(form.phoneCountryCode, form.phoneNumber),
-      country: form.residenceCountry || form.citizenshipCountry || undefined,
-      age: ageNum || (form.dateOfBirth
-        ? Math.floor((Date.now() - new Date(form.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        : undefined),
-      dateOfBirth: form.dateOfBirth || undefined,
-    }).then((result) => {
-      if (result.success && result.data) {
-        const structured = result.data.structured;
-        setShadowProfile(structured);
-        setShadowStatus('done');
-        setShadowLoading(false);
-        toast({ title: "Shadow profile ready ✓", status: "success", duration: 3000 });
-        saveToSupabase({ shadow_profile: structured });
-      } else {
-        setShadowStatus('error');
-        setShadowLoading(false);
-        console.error("[Profile] Shadow investigator error:", result.error);
-      }
-    }).catch((err) => {
-      setShadowStatus('error');
-      setShadowLoading(false);
-      console.error("[Profile] Shadow investigator exception:", err);
-    }).finally(() => {
-      // Use actual shadow status (done or error) to check completion
-      setShadowStatus((shdActual) => {
-        setInvestorStatus((invActual) => { checkAllDone(invActual, shdActual); return invActual; });
-        return shdActual;
-      });
-    });
   };
 
   const handleBack = () => {
@@ -858,24 +816,11 @@ export const useHushhUserProfileLogic = () => {
     return "border-slate-200 bg-white/80 text-slate-600";
   };
 
-  const shadowConfidenceLabel = shadowProfile ? getConfidenceLabel(shadowProfile.confidence || 0) : "Low";
-  const shadowLifestyleTags: string[] = shadowProfile
-    ? [
-        shadowProfile.diet ? `Diet: ${shadowProfile.diet}` : "",
-        ...(shadowProfile.hobbies || []).slice(0, 3),
-        ...(shadowProfile.coffeePreferences || []).slice(0, 2).map((pref) => `Coffee: ${pref}`),
-        ...(shadowProfile.chaiPreferences || []).slice(0, 1).map((pref) => `Chai: ${pref}`),
-        ...(shadowProfile.drinkPreferences || []).slice(0, 2),
-      ].filter(Boolean)
-    : [];
-  const shadowBrandTags: string[] = shadowProfile ? (shadowProfile.brands || []).slice(0, 6) : [];
-  const shadowKnownForTags: string[] = shadowProfile ? (shadowProfile.knownFor || []).slice(0, 4) : [];
-
   return {
     form, setForm, userId, investorProfile, setInvestorProfile, profileSlug,
-    loading, loadingSeconds, isProcessing, investorStatus, shadowStatus,
+    loading, loadingSeconds, isProcessing, investorStatus,
     setLoading, hasOnboardingData, isApplePassLoading, isGooglePassLoading,
-    editingField, setEditingField, shadowProfile, shadowLoading, nwsResult, nwsLoading,
+    editingField, setEditingField, nwsResult, nwsLoading,
     isFooterVisible, hasCopied, onCopy, profileUrl, navigate, toast,
     FIELD_OPTIONS, MULTI_SELECT_FIELDS, COUNTRIES, defaultFormState,
     isDirty, isSaving, handleSaveChanges,
@@ -884,6 +829,5 @@ export const useHushhUserProfileLogic = () => {
     handleShareWhatsApp, handleShareX, handleShareEmail, handleShareLinkedIn, handleOpenProfile,
     inputClassName, selectClassName, labelClassName, cardClassName,
     aiFieldCardTones, getConfidenceLabel, getConfidenceBadgeClass,
-    shadowConfidenceLabel, shadowLifestyleTags, shadowBrandTags, shadowKnownForTags,
   };
 };
