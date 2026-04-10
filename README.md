@@ -2,6 +2,16 @@
 
 This repository combines the public website, product surfaces, serverless APIs, Supabase assets, and mobile shells used across Hushh experiences.
 
+## Open source
+
+Repository URL: https://github.com/hushh-labs/hushh_Tech_website
+
+- License: [MIT](/Users/ankitkumarsingh/hushhTech/LICENSE)
+- Contributing guide: [CONTRIBUTING.md](/Users/ankitkumarsingh/hushhTech/CONTRIBUTING.md)
+- Security policy: [SECURITY.md](/Users/ankitkumarsingh/hushhTech/SECURITY.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](/Users/ankitkumarsingh/hushhTech/CODE_OF_CONDUCT.md)
+- Support: [SUPPORT.md](/Users/ankitkumarsingh/hushhTech/SUPPORT.md)
+
 ## Project layout
 
 - `src/`: Active frontend code.

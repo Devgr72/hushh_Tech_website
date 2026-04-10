@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks
+        entry: bash scripts/security/run-gitleaks.sh
+        language: system
+        pass_filenames: false
+      - id: browser-secret-patterns
+        name: browser secret pattern policy
+        entry: bash scripts/security/check-browser-secret-patterns.sh
+        language: system
+        pass_filenames: false

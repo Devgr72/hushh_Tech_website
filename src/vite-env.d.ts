@@ -11,16 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_MARKET_SUPABASE_URL?: string;
   readonly VITE_MARKET_SUPABASE_KEY?: string;
 
-  // Gemini API Keys (with fallback support)
-  readonly VITE_GEMINI_API_KEY: string;
-  readonly VITE_GEMINI_API_KEY_FALLBACK_1?: string;
-  readonly VITE_GEMINI_API_KEY_FALLBACK_2?: string;
-  readonly VITE_GEMINI_API_KEY_FALLBACK_3?: string;
-
-  // OpenAI
-  readonly VITE_OPENAI_API_KEY?: string;
-  readonly VITE_ALLOW_INSECURE_BROWSER_LLM?: string;
-
   // n8n Webhook
   readonly VITE_N8N_WEBHOOK_URL?: string;
 
