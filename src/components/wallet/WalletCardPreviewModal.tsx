@@ -1,24 +1,12 @@
 import { useEffect, useState, type MouseEvent } from "react";
-import {
-  Box,
-  Button,
-  Divider,
-  HStack,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Text,
-  useBreakpointValue,
-  VStack,
-} from "@chakra-ui/react";
+import { useBreakpointValue } from "@chakra-ui/react";
 import { QRCodeSVG } from "qrcode.react";
-import { Eye, ExternalLink } from "lucide-react";
 import { FaApple } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 
+import HushhTechCta, {
+  HushhTechCtaVariant,
+} from "../hushh-tech-cta/HushhTechCta";
 import type { WalletPreviewModel } from "../../services/walletPass";
 
 interface WalletCardPreviewModalProps {
@@ -77,6 +65,83 @@ function getHolderNameTypography(holderName: string) {
   };
 }
 
+interface PreviewInfoRowProps {
+  icon: string;
+  label: string;
+  value: string;
+  href?: string | null;
+  testId?: string;
+  valueTestId?: string;
+}
+
+function PreviewInfoRow({
+  icon,
+  label,
+  value,
+  href,
+  testId,
+  valueTestId,
+}: PreviewInfoRowProps) {
+  const commonClasses = [
+    "w-full flex items-start gap-4 py-5 border-b border-gray-200 text-left",
+    href ? "transition-colors hover:bg-gray-50" : "",
+  ]
+    .join(" ")
+    .trim();
+
+  const content = (
+    <>
+      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+        <span
+          className="material-symbols-outlined text-gray-700 text-lg"
+          style={{ fontVariationSettings: "'wght' 400" }}
+        >
+          {icon}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-semibold text-gray-900 block mb-1">
+          {label}
+        </span>
+        <span
+          data-testid={valueTestId}
+          className="text-sm text-gray-600 font-medium leading-relaxed break-all"
+        >
+          {value}
+        </span>
+      </div>
+      {href ? (
+        <span
+          className="material-symbols-outlined text-gray-400 text-lg shrink-0 mt-1"
+          style={{ fontVariationSettings: "'wght' 400" }}
+        >
+          arrow_outward
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-testid={testId}
+        className={commonClasses}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div data-testid={testId} className={commonClasses}>
+      {content}
+    </div>
+  );
+}
+
 export default function WalletCardPreviewModal({
   isOpen,
   onClose,
@@ -130,7 +195,37 @@ export default function WalletCardPreviewModal({
     };
   }, []);
 
-  if (!preview) {
+  useEffect(() => {
+    if (typeof document === "undefined" || !isOpen || !preview) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, preview]);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || !isOpen || !preview) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose, preview]);
+
+  if (!isOpen || !preview) {
     return null;
   }
 
@@ -146,7 +241,7 @@ export default function WalletCardPreviewModal({
     ? "Google Wallet soon."
     : googleWalletSupportMessage;
   const profileLinkDescription = hasPublicProfileUrl
-    ? preview.profileUrl
+    ? preview.profileUrl || ""
     : "Shared soon";
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
@@ -167,344 +262,331 @@ export default function WalletCardPreviewModal({
     setRotation({ x: 0, y: 0 });
   };
 
+  const appleCtaVariant = HushhTechCtaVariant.BLACK;
+  const googleCtaVariant = appleWalletSupported
+    ? HushhTechCtaVariant.WHITE
+    : HushhTechCtaVariant.BLACK;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size={{ base: "full", md: "xl" }} isCentered>
-      <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(8px)" />
-      <ModalContent
-        mx={{ base: 0, md: 4 }}
-        my={{ base: 0, md: 8 }}
-        maxW={{ base: "100vw", md: "min(100vw - 2rem, 64rem)" }}
-        borderRadius={{ base: 0, md: "28px" }}
-        bg="#F8F5EC"
-        overflow="hidden"
-      >
-        <ModalHeader pb={{ base: 1, md: 2 }} fontSize={{ base: "2xl", md: "3xl" }}>
-          Preview Card
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody px={{ base: 4, md: 6 }} pb={{ base: 6, md: 8 }}>
-          <VStack spacing={{ base: 4, md: 5 }} align="stretch">
-            <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
-              A preview of your Hushh Gold card.
-            </Text>
+    <>
+      <div
+        data-testid="wallet-preview-backdrop"
+        className="fixed inset-0 z-40 bg-white/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-            <Box perspective="1600px">
-              <Box
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                data-testid="wallet-preview-shell"
-                data-tilt-enabled={enableCardTilt ? "true" : "false"}
-                transform={
-                  enableCardTilt
-                    ? `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1.01, 1.01, 1.01)`
-                    : "none"
-                }
-                transition={enableCardTilt ? "transform 120ms ease-out" : "none"}
-                sx={enableCardTilt ? { transformStyle: "preserve-3d" } : undefined}
-              >
-                <Box
-                  position="relative"
-                  mx="auto"
-                  w="min(100%, 32rem)"
-                  aspectRatio={1.586}
-                  borderRadius="28px"
-                  px={{ base: 4, sm: 5, md: 6 }}
-                  py={{ base: 4, sm: 5, md: 6 }}
-                  bgGradient="linear(135deg, #443317 0%, #8D6B2F 34%, #D4AF37 62%, #8A6124 100%)"
-                  color="#0B1120"
-                  border="1px solid rgba(255,255,255,0.35)"
-                  boxShadow="0 28px 80px rgba(15, 23, 42, 0.28), inset 0 1px 10px rgba(255, 255, 255, 0.35), inset 0 -24px 44px rgba(0, 0, 0, 0.2)"
-                  overflow="hidden"
-                >
-                  <Box
-                    position="absolute"
-                    inset="10px"
-                    borderRadius="22px"
-                    border="1px solid rgba(255,255,255,0.24)"
-                    pointerEvents="none"
-                  />
-                  <Box
-                    position="absolute"
-                    inset="0"
-                    bg="radial-gradient(circle at 16% 14%, rgba(255,255,255,0.55), transparent 38%), radial-gradient(circle at 88% 82%, rgba(255,255,255,0.22), transparent 30%)"
-                    pointerEvents="none"
-                  />
-
-                  <Box
-                    display="grid"
-                    h="100%"
-                    gridTemplateColumns="minmax(0, 1fr) auto"
-                    gridTemplateRows="auto minmax(0, 1fr) auto"
-                    columnGap={{ base: 3, md: 4 }}
-                    rowGap={{ base: 3, md: 4 }}
-                  >
-                    <VStack align="flex-start" spacing={{ base: 1, md: 1.5 }} minW={0}>
-                      <Text
-                        fontSize="clamp(0.7rem, 0.58rem + 0.5vw, 0.9rem)"
-                        letterSpacing="clamp(0.18em, 0.12em + 0.3vw, 0.34em)"
-                        fontWeight="700"
-                        color="rgba(11, 17, 32, 0.58)"
-                        noOfLines={1}
-                      >
-                        {preview.badgeText}
-                      </Text>
-                      <Text
-                        fontSize="clamp(0.95rem, 0.82rem + 0.7vw, 1.5rem)"
-                        fontWeight="600"
-                        lineHeight="1.1"
-                        noOfLines={2}
-                      >
-                        {preview.title}
-                      </Text>
-                    </VStack>
-                    <Box
-                      justifySelf="end"
-                      alignSelf="start"
-                      px={{ base: 2.5, sm: 3, md: 4 }}
-                      py={{ base: 1.5, md: 2 }}
-                      borderRadius="999px"
-                      bg="rgba(255,255,255,0.18)"
-                      border="1px solid rgba(255,255,255,0.28)"
-                      backdropFilter="blur(8px)"
-                      maxW={{ base: "9.5rem", md: "10.75rem" }}
-                    >
-                      <Text
-                        fontSize="clamp(0.62rem, 0.56rem + 0.26vw, 0.84rem)"
-                        fontWeight="700"
-                        letterSpacing="0.12em"
-                        textAlign="center"
-                        noOfLines={1}
-                      >
-                        GOLD MEMBER
-                      </Text>
-                    </Box>
-
-                    <VStack
-                      gridColumn="1"
-                      gridRow="2"
-                      align="flex-start"
-                      justify="flex-start"
-                      spacing={{ base: 1, md: 1.5 }}
-                      pt={{ base: 0.5, md: 1 }}
-                      minW={0}
-                    >
-                      <Text
-                        data-testid="wallet-preview-holder-name"
-                        fontSize={holderNameTypography.fontSize}
-                        fontWeight="700"
-                        color="rgba(11, 17, 32, 0.9)"
-                        textShadow="0 1px 0 rgba(255, 255, 255, 0.45)"
-                        lineHeight={holderNameTypography.lineHeight}
-                        minH={holderNameTypography.minHeight}
-                        noOfLines={2}
-                        overflowWrap="anywhere"
-                      >
-                        {preview.holderName}
-                      </Text>
-                      <Text
-                        fontSize="clamp(0.9rem, 0.76rem + 0.65vw, 1.2rem)"
-                        color="rgba(11, 17, 32, 0.74)"
-                        noOfLines={1}
-                      >
-                        {preview.organizationName}
-                      </Text>
-                      <Text
-                        data-testid="wallet-preview-membership-id"
-                        fontSize="clamp(0.72rem, 0.66rem + 0.3vw, 0.96rem)"
-                        fontWeight="600"
-                        color="rgba(11, 17, 32, 0.68)"
-                        noOfLines={1}
-                      >
-                        Membership ID · {previewMembershipId}
-                      </Text>
-                    </VStack>
-
-                    <VStack
-                      gridColumn="1"
-                      gridRow="3"
-                      align="flex-start"
-                      justify="flex-end"
-                      spacing={{ base: 1.5, md: 2 }}
-                      minW={0}
-                    >
-                      <Box
-                        px={{ base: 2.5, md: 3 }}
-                        py={{ base: 1.5, md: 2 }}
-                        borderRadius="999px"
-                        bg="rgba(255,255,255,0.16)"
-                        border="1px solid rgba(255,255,255,0.24)"
-                        maxW="100%"
-                      >
-                        <Text
-                          fontSize="clamp(0.65rem, 0.6rem + 0.24vw, 0.88rem)"
-                          fontWeight="700"
-                          noOfLines={1}
-                        >
-                          Investor - {preview.investmentClass}
-                        </Text>
-                      </Box>
-                      <Text
-                        fontSize="clamp(0.74rem, 0.69rem + 0.24vw, 0.95rem)"
-                        color="rgba(11, 17, 32, 0.7)"
-                        noOfLines={1}
-                      >
-                        {preview.email}
-                      </Text>
-                    </VStack>
-
-                    <Box
-                      gridColumn="2"
-                      gridRow="3"
-                      justifySelf="end"
-                      alignSelf="end"
-                      data-testid="wallet-preview-qr"
-                      boxSize={`${qrFrameSize}px`}
-                      bg="whiteAlpha.920"
-                      borderRadius={{ base: "18px", md: "22px" }}
-                      p={`${qrPadding}px`}
-                      boxShadow="0 10px 24px rgba(15, 23, 42, 0.16)"
-                    >
-                      <Box boxSize={`${qrSize}px`}>
-                        <QRCodeSVG
-                          value={preview.qrValue}
-                          size={qrSize}
-                          bgColor="#FFFFFF"
-                          fgColor="#0B1120"
-                          level="M"
-                          includeMargin={false}
-                        />
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            <Box
-              display="grid"
-              gap={3}
-              gridTemplateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}
-              alignItems="stretch"
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 sm:px-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wallet-preview-title"
+          className="relative w-full max-w-[42rem] bg-white rounded-t-3xl sm:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08),0_0_1px_rgba(0,0,0,0.04)] border border-gray-100/50 flex flex-col max-h-[92vh] overflow-hidden"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+            <h2
+              id="wallet-preview-title"
+              className="text-[1.75rem] leading-[1.15] text-black tracking-tight font-serif"
+              style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              <Box
-                borderRadius="20px"
-                border="1px solid rgba(15,23,42,0.08)"
-                bg="white"
-                px={4}
-                py={4}
-              >
-                <HStack spacing={2} mb={2} color="#0B1120">
-                  <Eye size={16} />
-                  <Text fontWeight="600" fontSize="sm">
-                    Details
-                  </Text>
-                </HStack>
-                <VStack spacing={1.5} align="stretch">
-                  <Text
-                    fontSize="xs"
-                    color="gray.700"
-                    overflowWrap="anywhere"
-                  >
-                    ID · {preview.membershipId}
-                  </Text>
-                  <Text
-                    fontSize="xs"
-                    color="gray.600"
-                    overflowWrap="anywhere"
-                  >
-                    Email · {preview.email}
-                  </Text>
-                </VStack>
-              </Box>
-              <Box
-                as={hasPublicProfileUrl ? "a" : "div"}
-                href={hasPublicProfileUrl ? preview.profileUrl || undefined : undefined}
-                target={hasPublicProfileUrl ? "_blank" : undefined}
-                rel={hasPublicProfileUrl ? "noopener noreferrer" : undefined}
-                data-testid="wallet-preview-profile-link"
-                borderRadius="20px"
-                border="1px solid rgba(15,23,42,0.08)"
-                bg="white"
-                px={4}
-                py={4}
-                display="block"
-                transition="transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease"
-                cursor={hasPublicProfileUrl ? "pointer" : "not-allowed"}
-                opacity={hasPublicProfileUrl ? 1 : 0.72}
-                _hover={
-                  hasPublicProfileUrl
-                    ? {
-                        borderColor: "rgba(15,23,42,0.18)",
-                        boxShadow: "0 10px 26px rgba(15, 23, 42, 0.08)",
-                        transform: "translateY(-1px)",
-                      }
-                    : undefined
-                }
-              >
-                <HStack spacing={2} mb={2} color="#0B1120">
-                  <ExternalLink size={16} />
-                  <Text fontWeight="600" fontSize="sm">
-                    Profile
-                  </Text>
-                </HStack>
-                <Text
-                  data-testid="wallet-preview-profile-url"
-                  fontSize="xs"
-                  color="gray.600"
-                  overflowWrap="anywhere"
+              Preview Card
+            </h2>
+            <button
+              type="button"
+              data-testid="wallet-preview-done"
+              onClick={onClose}
+              className="text-xs font-bold uppercase tracking-widest text-black hover:underline"
+            >
+              Done
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 sm:px-8 pb-8">
+            <section className="py-6">
+              <div style={{ perspective: "1600px" }}>
+                <div
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
+                  data-testid="wallet-preview-shell"
+                  data-tilt-enabled={enableCardTilt ? "true" : "false"}
+                  style={{
+                    transform: enableCardTilt
+                      ? `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1.01, 1.01, 1.01)`
+                      : "none",
+                    transition: enableCardTilt ? "transform 120ms ease-out" : "none",
+                    transformStyle: enableCardTilt ? "preserve-3d" : undefined,
+                  }}
                 >
-                  {profileLinkDescription}
-                </Text>
-              </Box>
-            </Box>
+                  <div
+                    className="relative mx-auto w-full max-w-[32rem] overflow-hidden border"
+                    style={{
+                      aspectRatio: "1.586",
+                      borderRadius: "28px",
+                      padding: "clamp(1rem, 0.8rem + 1vw, 1.5rem)",
+                      background:
+                        "linear-gradient(135deg, #443317 0%, #8D6B2F 34%, #D4AF37 62%, #8A6124 100%)",
+                      color: "#0B1120",
+                      borderColor: "rgba(255,255,255,0.35)",
+                      boxShadow:
+                        "0 28px 80px rgba(15, 23, 42, 0.28), inset 0 1px 10px rgba(255, 255, 255, 0.35), inset 0 -24px 44px rgba(0, 0, 0, 0.2)",
+                    }}
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-[10px] rounded-[22px] border"
+                      style={{ borderColor: "rgba(255,255,255,0.24)" }}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 16% 14%, rgba(255,255,255,0.55), transparent 38%), radial-gradient(circle at 88% 82%, rgba(255,255,255,0.22), transparent 30%)",
+                      }}
+                    />
 
-            <Divider borderColor="blackAlpha.200" />
+                    <div
+                      className="grid h-full"
+                      style={{
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        gridTemplateRows: "auto minmax(0, 1fr) auto",
+                        columnGap: "clamp(0.75rem, 0.55rem + 0.5vw, 1rem)",
+                        rowGap: "clamp(0.75rem, 0.55rem + 0.5vw, 1rem)",
+                      }}
+                    >
+                      <div className="min-w-0 flex flex-col items-start gap-1.5">
+                        <p
+                          className="font-bold truncate"
+                          style={{
+                            fontSize: "clamp(0.7rem, 0.58rem + 0.5vw, 0.9rem)",
+                            letterSpacing: "clamp(0.18em, 0.12em + 0.3vw, 0.34em)",
+                            color: "rgba(11, 17, 32, 0.58)",
+                          }}
+                        >
+                          {preview.badgeText}
+                        </p>
+                        <p
+                          className="font-semibold leading-tight"
+                          style={{
+                            fontSize: "clamp(0.95rem, 0.82rem + 0.7vw, 1.5rem)",
+                            lineHeight: 1.1,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {preview.title}
+                        </p>
+                      </div>
 
-            <VStack spacing={3} align="stretch">
+                      <div
+                        className="justify-self-end self-start rounded-full border backdrop-blur-md"
+                        style={{
+                          padding:
+                            "clamp(0.375rem, 0.28rem + 0.3vw, 0.5rem) clamp(0.75rem, 0.6rem + 0.6vw, 1rem)",
+                          background: "rgba(255,255,255,0.18)",
+                          borderColor: "rgba(255,255,255,0.28)",
+                          maxWidth: "10.75rem",
+                        }}
+                      >
+                        <p
+                          className="text-center font-bold truncate"
+                          style={{
+                            fontSize: "clamp(0.62rem, 0.56rem + 0.26vw, 0.84rem)",
+                            letterSpacing: "0.12em",
+                          }}
+                        >
+                          GOLD MEMBER
+                        </p>
+                      </div>
+
+                      <div
+                        className="min-w-0 flex flex-col items-start justify-start gap-1.5 pt-1"
+                        style={{ gridColumn: "1", gridRow: "2" }}
+                      >
+                        <p
+                          data-testid="wallet-preview-holder-name"
+                          className="font-bold"
+                          style={{
+                            fontSize: holderNameTypography.fontSize,
+                            color: "rgba(11, 17, 32, 0.9)",
+                            textShadow: "0 1px 0 rgba(255, 255, 255, 0.45)",
+                            lineHeight: holderNameTypography.lineHeight,
+                            minHeight: holderNameTypography.minHeight,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {preview.holderName}
+                        </p>
+                        <p
+                          className="truncate"
+                          style={{
+                            fontSize: "clamp(0.9rem, 0.76rem + 0.65vw, 1.2rem)",
+                            color: "rgba(11, 17, 32, 0.74)",
+                          }}
+                        >
+                          {preview.organizationName}
+                        </p>
+                        <p
+                          data-testid="wallet-preview-membership-id"
+                          className="truncate font-semibold"
+                          style={{
+                            fontSize: "clamp(0.72rem, 0.66rem + 0.3vw, 0.96rem)",
+                            color: "rgba(11, 17, 32, 0.68)",
+                          }}
+                        >
+                          Membership ID · {previewMembershipId}
+                        </p>
+                      </div>
+
+                      <div
+                        className="min-w-0 flex flex-col items-start justify-end gap-2"
+                        style={{ gridColumn: "1", gridRow: "3" }}
+                      >
+                        <div
+                          className="max-w-full rounded-full border"
+                          style={{
+                            padding:
+                              "clamp(0.375rem, 0.28rem + 0.3vw, 0.5rem) clamp(0.75rem, 0.6rem + 0.6vw, 1rem)",
+                            background: "rgba(255,255,255,0.16)",
+                            borderColor: "rgba(255,255,255,0.24)",
+                          }}
+                        >
+                          <p
+                            className="truncate font-bold"
+                            style={{
+                              fontSize: "clamp(0.65rem, 0.6rem + 0.24vw, 0.88rem)",
+                            }}
+                          >
+                            Investor - {preview.investmentClass}
+                          </p>
+                        </div>
+                        <p
+                          className="truncate"
+                          style={{
+                            fontSize: "clamp(0.74rem, 0.69rem + 0.24vw, 0.95rem)",
+                            color: "rgba(11, 17, 32, 0.7)",
+                          }}
+                        >
+                          {preview.email}
+                        </p>
+                      </div>
+
+                      <div
+                        data-testid="wallet-preview-qr"
+                        className="justify-self-end self-end"
+                        style={{
+                          gridColumn: "2",
+                          gridRow: "3",
+                          width: `${qrFrameSize}px`,
+                          height: `${qrFrameSize}px`,
+                          background: "rgba(255,255,255,0.92)",
+                          borderRadius: qrFrameSize >= 128 ? "22px" : "18px",
+                          padding: `${qrPadding}px`,
+                          boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
+                        }}
+                      >
+                        <div style={{ width: `${qrSize}px`, height: `${qrSize}px` }}>
+                          <QRCodeSVG
+                            value={preview.qrValue}
+                            size={qrSize}
+                            bgColor="#FFFFFF"
+                            fgColor="#0B1120"
+                            level="M"
+                            includeMargin={false}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-0">
+              <PreviewInfoRow
+                icon="badge"
+                label="Membership ID"
+                value={preview.membershipId}
+              />
+              <PreviewInfoRow icon="mail" label="Email" value={preview.email} />
+              <PreviewInfoRow
+                icon="link"
+                label="Profile Link"
+                value={profileLinkDescription}
+                href={hasPublicProfileUrl ? preview.profileUrl : null}
+                testId="wallet-preview-profile-link"
+                valueTestId="wallet-preview-profile-url"
+              />
+            </section>
+
+            <section className="pt-8 pb-2 space-y-3">
               {appleWalletSupported ? (
-                <Button
-                  leftIcon={<FaApple />}
-                  bg="#0B1120"
-                  color="white"
-                  borderRadius="16px"
-                  h="48px"
+                <HushhTechCta
+                  variant={appleCtaVariant}
                   onClick={onAddToAppleWallet}
-                  isLoading={isApplePassLoading}
-                  loadingText="Opening..."
-                  _hover={{ bg: "#111827" }}
+                  disabled={isApplePassLoading}
+                  aria-label="Add to Apple Wallet"
                 >
-                  Add to Apple Wallet
-                </Button>
-              ) : (
-                <Text fontSize="sm" color="gray.600">
-                  {modalAppleSupportMessage}
-                </Text>
-              )}
+                  {isApplePassLoading ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
+                      <span>Opening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaApple className="text-lg" />
+                      <span>Add to Apple Wallet</span>
+                    </>
+                  )}
+                </HushhTechCta>
+              ) : null}
 
               {googleWalletAvailable ? (
-                <Button
-                  leftIcon={<FcGoogle />}
-                  bg="white"
-                  color="#0B1120"
-                  border="1px solid rgba(15,23,42,0.12)"
-                  borderRadius="16px"
-                  h="48px"
+                <HushhTechCta
+                  variant={googleCtaVariant}
                   onClick={onAddToGoogleWallet}
-                  isLoading={isGooglePassLoading}
-                  loadingText="Opening..."
-                  _hover={{ bg: "#F8FAFC" }}
+                  disabled={isGooglePassLoading}
+                  aria-label="Add to Google Wallet"
                 >
-                  Add to Google Wallet
-                </Button>
-              ) : (
-                <Text fontSize="sm" color="gray.600">
+                  {isGooglePassLoading ? (
+                    <>
+                      <div
+                        className={`animate-spin h-4 w-4 border-2 rounded-full ${
+                          googleCtaVariant === HushhTechCtaVariant.BLACK
+                            ? "border-white/30 border-t-white"
+                            : "border-black/20 border-t-black"
+                        }`}
+                      />
+                      <span>Opening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FcGoogle className="text-lg" />
+                      <span>Add to Google Wallet</span>
+                    </>
+                  )}
+                </HushhTechCta>
+              ) : null}
+
+              {!appleWalletSupported ? (
+                <p className="text-xs text-gray-500 font-light text-center">
+                  {modalAppleSupportMessage}
+                </p>
+              ) : null}
+
+              {!googleWalletAvailable ? (
+                <p className="text-xs text-gray-500 font-light text-center">
                   {modalGoogleSupportMessage}
-                </Text>
-              )}
-            </VStack>
-          </VStack>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+                </p>
+              ) : null}
+            </section>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

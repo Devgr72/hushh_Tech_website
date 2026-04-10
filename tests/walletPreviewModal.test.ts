@@ -108,29 +108,37 @@ describe("WalletCardPreviewModal", () => {
     });
   };
 
+  const createModalProps = (
+    overrides: Partial<WalletCardPreviewModalProps> = {}
+  ): WalletCardPreviewModalProps => ({
+    isOpen: true,
+    onClose: () => undefined,
+    preview,
+    appleWalletSupported: false,
+    appleWalletSupportMessage:
+      "Available on iPhone in Wallet-supported browsers.",
+    googleWalletAvailable: false,
+    googleWalletSupportMessage:
+      "Google Wallet is temporarily unavailable while we finish the wallet issuer setup.",
+    ...overrides,
+  });
+
   const renderModal = async (
     overrides: Partial<WalletCardPreviewModalProps> = {}
   ) => {
+    const props = createModalProps(overrides);
+
     await act(async () => {
       root.render(
         React.createElement(
           ChakraProvider,
           { theme },
-          React.createElement(WalletCardPreviewModal, {
-            isOpen: true,
-            onClose: () => undefined,
-            preview,
-            appleWalletSupported: false,
-            appleWalletSupportMessage:
-              "Available on iPhone in Wallet-supported browsers.",
-            googleWalletAvailable: false,
-            googleWalletSupportMessage:
-              "Google Wallet is temporarily unavailable while we finish the wallet issuer setup.",
-            ...overrides,
-          })
+          React.createElement(WalletCardPreviewModal, props)
         )
       );
     });
+
+    return props;
   };
 
   beforeEach(() => {
@@ -146,29 +154,36 @@ describe("WalletCardPreviewModal", () => {
       root.unmount();
     });
     container.remove();
+    document.body.style.overflow = "";
     vi.restoreAllMocks();
   });
 
-  it("shows Apple add action when Apple Wallet is supported", async () => {
+  it("renders the KYC-style sheet header, rows, and helper copy", async () => {
     await renderModal({
       appleWalletSupported: true,
       onAddToAppleWallet: () => undefined,
     });
 
-    expect(document.body.textContent).toContain("Preview Card");
-    expect(document.body.textContent).toContain(
-      "A preview of your Hushh Gold card."
-    );
-    expect(document.body.textContent).toContain("Details");
-    expect(document.body.textContent).toContain("Profile");
+    const title = document.querySelector(
+      "#wallet-preview-title"
+    ) as HTMLHeadingElement | null;
+    const doneButton = document.querySelector(
+      '[data-testid="wallet-preview-done"]'
+    ) as HTMLButtonElement | null;
+
+    expect(title?.textContent).toBe("Preview Card");
+    expect(title?.style.fontFamily).toContain("Playfair Display");
+    expect(doneButton?.textContent).toBe("Done");
+    expect(document.body.textContent).toContain("Membership ID");
+    expect(document.body.textContent).toContain("Email");
+    expect(document.body.textContent).toContain("Profile Link");
     expect(document.body.textContent).toContain("Add to Apple Wallet");
     expect(document.body.textContent).toContain("Google Wallet soon.");
     expect(document.body.textContent).not.toContain(
-      "This is a browser preview of your Hushh Gold Wallet card."
+      "A preview of your Hushh Gold card."
     );
-    expect(document.body.textContent).not.toContain(
-      "Apple Wallet and Google Wallet use the same Hushh Gold card details."
-    );
+    expect(document.body.textContent).not.toContain("Details");
+    expect(document.body.textContent).not.toContain("Browser Preview");
   });
 
   it("shows helper copy instead of the Apple add action when unsupported", async () => {
@@ -213,7 +228,7 @@ describe("WalletCardPreviewModal", () => {
     expect(membershipPreview?.textContent).toContain("Membership ID · ");
     expect(membershipPreview?.textContent).toContain("…");
     expect(membershipPreview?.textContent).toContain("2597e6b8".slice(-6));
-    expect(document.body.textContent).toContain(`ID · ${longPreview.membershipId}`);
+    expect(document.body.textContent).toContain(longPreview.membershipId);
     expect(profileLinkTile?.getAttribute("href")).toBe(longPreview.profileUrl);
     expect(profileLinkTile?.getAttribute("target")).toBe("_blank");
     expect(profileUrlDetails?.textContent).toContain(longPreview.profileUrl);
@@ -243,7 +258,7 @@ describe("WalletCardPreviewModal", () => {
     expect(document.body.textContent).toContain("Google Wallet soon.");
   });
 
-  it("renders the profile tile as unavailable when there is no slug-backed public URL", async () => {
+  it("renders the profile row as unavailable when there is no slug-backed public URL", async () => {
     await renderModal({
       preview: {
         ...preview,
@@ -251,14 +266,65 @@ describe("WalletCardPreviewModal", () => {
       },
     });
 
-    const profileLinkTile = document.querySelector(
+    const profileLinkRow = document.querySelector(
       '[data-testid="wallet-preview-profile-link"]'
     );
     const profileUrlDetails = document.querySelector(
       '[data-testid="wallet-preview-profile-url"]'
     );
 
-    expect(profileLinkTile?.getAttribute("href")).toBeNull();
+    expect(profileLinkRow?.getAttribute("href")).toBeNull();
     expect(profileUrlDetails?.textContent).toContain("Shared soon");
+  });
+
+  it("closes when the backdrop is clicked", async () => {
+    const onClose = vi.fn();
+    await renderModal({ onClose });
+
+    const backdrop = document.querySelector(
+      '[data-testid="wallet-preview-backdrop"]'
+    ) as HTMLDivElement | null;
+
+    expect(backdrop).not.toBeNull();
+
+    await act(async () => {
+      backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes when Escape is pressed", async () => {
+    const onClose = vi.fn();
+    await renderModal({ onClose });
+
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("locks body scroll while open and restores it when closed", async () => {
+    const props = await renderModal();
+
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          ChakraProvider,
+          { theme },
+          React.createElement(WalletCardPreviewModal, {
+            ...props,
+            isOpen: false,
+          })
+        )
+      );
+    });
+
+    expect(document.body.style.overflow).toBe("");
   });
 });
