@@ -35,20 +35,18 @@ Extend existing videos by 7 seconds. Continue the story with additional generate
 
 ## API Integration
 
-This module uses the Google Gemini API with the `veo-3.1-generate-preview` model.
+This module uses the Google Gemini API with the `veo-3.1-generate-preview` model through a server-side proxy.
 
 ### Environment Variables
 
 ```env
-VITE_GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_server_side_gemini_api_key
 ```
 
 ### API Usage Pattern
 
 ```javascript
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+// Browser clients call the secure server route instead of holding a vendor key.
 
 // Generate video from text
 let operation = await ai.models.generateVideos({

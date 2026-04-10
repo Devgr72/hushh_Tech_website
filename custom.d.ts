@@ -39,10 +39,7 @@ interface ImportMetaEnv {
   readonly VITE_GUEST_MODE_ACCESS_TOKEN?: string;
   readonly VITE_MARKET_SUPABASE_URL?: string;
   readonly VITE_MARKET_SUPABASE_KEY?: string;
-  readonly VITE_OPENAI_API_KEY?: string;
-  readonly VITE_ALLOW_INSECURE_BROWSER_LLM?: string;
   readonly VITE_FINNHUB_API_KEY?: string;
-  readonly VITE_GEMINI_API_KEY?: string;
 
   // KYC A2A Network Configuration
   readonly VITE_KYC_ENV?: 'development' | 'staging' | 'production';

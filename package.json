@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:vercel": "vercel dev --listen 3000",
+    "security:browser-secrets": "bash scripts/security/check-browser-secret-patterns.sh",
     "security:gitleaks": "bash scripts/security/run-gitleaks.sh",
     "security:audit": "bash scripts/security/open-source-audit.sh",
     "security:pre-commit": "PRE_COMMIT_HOME=.pre-commit-cache pre-commit run --all-files",

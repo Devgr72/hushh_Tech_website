@@ -12,8 +12,8 @@ if git ls-files | rg -n '(^|/)\.env$|(^|/)vertex-ai-key\.json$|\.p8$|(^|/)privat
   exit 1
 fi
 
-echo "Running gitleaks on the current tree..."
-bash scripts/security/run-gitleaks.sh
+echo "Running browser-secret policy checks..."
+bash scripts/security/check-browser-secret-patterns.sh
 
 echo "Checking known historical exposure paths..."
 if git log --all --name-only --pretty=format: | rg -n '^\.env$|^src/scripts/AuthKey_LK53NZBH4L\.p8$'; then
@@ -22,4 +22,7 @@ if git log --all --name-only --pretty=format: | rg -n '^\.env$|^src/scripts/Auth
   exit 1
 fi
 
-echo "Current-tree audit passed. Historical rewrite is still required before the repo is fully secret-clean."
+echo "Running gitleaks..."
+bash scripts/security/run-gitleaks.sh
+
+echo "Open-source audit passed."

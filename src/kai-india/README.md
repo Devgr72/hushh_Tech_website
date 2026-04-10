@@ -27,7 +27,7 @@ AI-powered portfolio allocation with 3 risk profiles:
 ## 🛠 Tech Stack
 
 - **Frontend**: React + TypeScript + Tailwind CSS
-- **AI Backend**: Gemini 2.5 Flash with Google Search grounding
+- **AI Backend**: Server-side Gemini 2.5 Flash with Google Search grounding
 - **Charts**: Recharts (Pie Chart for portfolio allocation)
 - **Data**: Real-time NSE/BSE market data via Google Search API
 
@@ -49,10 +49,14 @@ src/kai-india/
 
 ## 🔑 Environment Variables
 
-Requires `VITE_GEMINI_API_KEY` in `.env.local`:
+Kai India now uses the server route at `/api/kai-india`.
+Configure Gemini credentials on the server runtime instead of the browser bundle:
 
 ```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY_2=optional_fallback_key
+GEMINI_API_KEY_3=optional_fallback_key
+GEMINI_API_KEY_4=optional_fallback_key
 ```
 
 ## 🎯 API Features
@@ -99,4 +103,4 @@ Items failing validation are automatically filtered out.
 
 ---
 
-**Part of Hushh Technologies** | Built with ❤️ for Indian Investors
+**Part of Hushh Technologies** | Built for Indian Investors

@@ -38,8 +38,6 @@ steps:
       - '--build-arg'
       - 'VITE_KYC_API_BASE=${_VITE_KYC_API_BASE}'
       - '--build-arg'
-      - 'VITE_GEMINI_API_KEY=${_VITE_GEMINI_API_KEY}'
-      - '--build-arg'
       - 'VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}'
       - '--build-arg'
       - 'VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}'

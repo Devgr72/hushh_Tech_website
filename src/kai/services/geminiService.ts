@@ -80,134 +80,35 @@ export class GeminiService {
    */
   async connect(persona: UserPersona = 'Everyday Investor') {
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-      if (!apiKey) {
-        console.error("Gemini API Key not found");
-        this.config.onStatusChange("API Key Missing");
-        this.config.onConnectionStateChange(ConnectionState.ERROR);
-        return;
-      }
-      this.ai = new GoogleGenAI({ apiKey });
-
       this.config.onConnectionStateChange(ConnectionState.CONNECTING);
       this.config.onStatusChange(`Initializing ${persona} Protocol...`);
 
-      // Initialize Audio Contexts
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      this.inputAudioContext = new AudioContextClass({ sampleRate: PCM_SAMPLE_RATE });
-      this.outputAudioContext = new AudioContextClass({ sampleRate: AUDIO_PLAYBACK_RATE });
-
-      try {
-        await Promise.all([
-          this.inputAudioContext.resume(),
-          this.outputAudioContext.resume()
-        ]);
-      } catch (e) {
-        console.warn("Audio Context resume warning:", e);
-      }
-
-      this.gainNode = this.outputAudioContext.createGain();
-      this.gainNode.connect(this.outputAudioContext.destination);
-      this.analyser = this.outputAudioContext.createAnalyser();
-      this.analyser.fftSize = 256;
-      this.gainNode.connect(this.analyser);
-
-      // Get Media Stream
-      this.config.onStatusChange("Accessing sensory feeds...");
-
-      const mediaStreamPromise = navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+      const response = await fetch("/api/gemini-ephemeral-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user"
-        }
-      }).then(async stream => {
-        this.stream = stream;
-        if (this.config.videoElement) {
-          this.config.videoElement.srcObject = stream;
-          await this.config.videoElement.play().catch(console.error);
-        }
-        return stream;
-      }).catch(err => {
-        console.error("Media access failed:", err);
-        return null;
+        body: JSON.stringify({ persona }),
       });
 
-      let sessionResolve: (value: any) => void;
-      const sessionPromise = new Promise<any>((resolve) => {
-        sessionResolve = resolve;
-      });
+      const payload = await response.json().catch(() => ({}));
+      const message =
+        typeof payload?.detail === "string"
+          ? payload.detail
+          : typeof payload?.message === "string"
+            ? payload.message
+            : "Kai Live is temporarily unavailable while we finish the secure connection upgrade.";
 
-      // Start Connection
-      const connectPromise = this.ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
-          },
-          tools: tools,
-          systemInstruction: {
-            parts: [
-              { text: this.getSystemPrompt(persona) }
-            ]
-          },
-        },
-        callbacks: {
-          onopen: async () => {
-            this.config.onConnectionStateChange(ConnectionState.CONNECTED);
-            this.config.onStatusChange("Link Established.");
-
-            try {
-              this.session = await connectPromise;
-              sessionResolve(this.session);
-
-              const stream = await mediaStreamPromise;
-
-              if (stream) {
-                this.config.onStatusChange("Acquiring visual feed...");
-                await this.initiateVisualGreeting(this.session);
-              } else {
-                this.config.onStatusChange("Sensory input failed.");
-                this.sendTextTrigger(this.session, "SYSTEM_TRIGGER: Audio only mode. Greet me as the Financial Agent Kai.");
-              }
-            } catch (err) {
-              console.error("Initialization failed in onopen:", err);
-              this.config.onStatusChange("Initialization Error");
-            }
-          },
-          onmessage: async (message: LiveServerMessage) => {
-            this.handleServerMessage(message);
-          },
-          onclose: () => {
-            this.config.onConnectionStateChange(ConnectionState.DISCONNECTED);
-            this.config.onStatusChange("Link severed.");
-            this.cleanup();
-          },
-          onerror: (err) => {
-            console.error("Session error:", err);
-            this.config.onConnectionStateChange(ConnectionState.ERROR);
-            this.config.onStatusChange("Connection Error");
-            this.cleanup();
-          },
-        },
-      });
-
-      connectPromise.catch((error) => {
-        console.error('Connection failed:', error);
-        this.config.onConnectionStateChange(ConnectionState.ERROR);
-        this.config.onStatusChange("Connection failed.");
-        this.cleanup();
-      });
+      console.warn("Kai Live unavailable:", message);
+      this.config.onStatusChange(message);
+      this.config.onConnectionStateChange(ConnectionState.ERROR);
+      this.cleanup();
+      return;
 
     } catch (error) {
       console.error('Setup failed:', error);
       this.config.onConnectionStateChange(ConnectionState.ERROR);
+      this.config.onStatusChange("Kai Live is temporarily unavailable while we finish the secure connection upgrade.");
       this.cleanup();
     }
   }

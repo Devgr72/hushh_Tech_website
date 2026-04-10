@@ -1,6 +1,6 @@
 # Kai - Financial Intelligence Agent
 
-A real-time AI-powered financial intelligence assistant built with Gemini 2.0 Flash Live API, featuring voice/video interaction and multi-agent analysis.
+A financial intelligence assistant built around Gemini Live research patterns, voice/video interaction, and multi-agent analysis.
 
 ## Features
 
@@ -41,13 +41,8 @@ src/kai/
 
 ## Configuration
 
-### Environment Variables
-
-Add these to your `.env.local`:
-
-```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
-```
+Kai Live no longer accepts browser-visible Gemini keys.
+The route now requires a secure server-brokered transport, which is still being completed.
 
 ## Usage
 
@@ -74,7 +69,7 @@ Navigate to `/kai` in your browser to access the Financial Intelligence Agent.
 
 ### Gemini 2.0 Flash Live API
 
-The service uses Gemini's multimodal live API for real-time voice and video interaction:
+The product design remains centered on Gemini's multimodal live API for real-time voice and video interaction:
 
 ```typescript
 const session = await client.live.connect({
@@ -124,9 +119,9 @@ open http://localhost:5173/kai
 
 ## Security Considerations
 
-- API key is loaded from environment variables
-- Camera/microphone access requires user permission
-- All data is processed client-side and through Google's Gemini API
+- Browser-visible Gemini keys were removed from this repo baseline
+- Camera and microphone access still require user permission
+- Kai Live stays unavailable until the secure server-side transport is in place
 
 ## License
 

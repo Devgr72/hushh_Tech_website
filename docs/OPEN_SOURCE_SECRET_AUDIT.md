@@ -1,19 +1,13 @@
 # Open-Source Secret Audit
 
-This repo is being hardened for public contribution without changing production behavior during the cutover.
+This repo is being hardened for a public release without changing production behavior.
 
-## What This Cutover Adds
+## What Was Removed From The Public Baseline
 
-- contributor-facing repo docs and community health files
-- gitleaks-based scanning for the current tree and git history
-- a rewrite-history script for the maintainer-only cleanup step
-- branch protection and private vulnerability reporting on GitHub
-
-## What Still Requires Maintainer Follow-Up
-
-- credential rotation for historically exposed secrets
-- git history rewrite to remove committed `.env` and `.p8` artifacts
-- follow-up runtime/browser-secret cleanup work that has been intentionally split from the production-safe cutover
+- Browser-only OpenAI fallbacks such as `VITE_OPENAI_API_KEY`
+- Browser-only Gemini fallbacks such as `VITE_GEMINI_API_KEY`
+- Gemini session routes that returned provider URLs with embedded `?key=...`
+- Frontend build injection of Gemini vendor keys through `cloudbuild*.yaml`
 
 ## What Must Stay Server-Side
 
@@ -44,15 +38,16 @@ These values are intentionally public client config when used correctly:
 - `VITE_MARKET_SUPABASE_KEY`
 - Firebase public web config values
 
-## Repo Guardrails In This PR
+## Repo Guardrails
 
+- `npm run security:browser-secrets`
 - `npm run security:gitleaks`
 - `npm run security:audit`
 - `npm run security:pre-commit`
 - `.pre-commit-config.yaml`
 - `.github/workflows/secret-hygiene.yml`
 
-## Before The History Rewrite
+## Before Publishing
 
 1. Rotate every credential exposed in git history or prior browser/runtime flows.
 2. Verify production runs on rotated secrets stored in GCP Secret Manager.
