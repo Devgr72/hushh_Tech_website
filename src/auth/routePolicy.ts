@@ -7,6 +7,7 @@ export const GUEST_AUTH_ROUTE_PREFIXES = [
   "/auth/callback",
   "/sign-nda",
   "/document-viewer",
+  "/hushh-hackathon",
 ] as const;
 
 export const PUBLIC_MARKETING_ROUTE_PREFIXES = [
