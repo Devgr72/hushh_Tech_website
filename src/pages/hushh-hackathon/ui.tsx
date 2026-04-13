@@ -13,16 +13,23 @@ import {
   HERO_YEAR,
   HERO_SUBTITLE,
   HERO_DESCRIPTION,
+  UNSTOP_EVENT_URL,
   CONTRIBUTION_START,
   CONTRIBUTION_END,
   PROJECT_TRACKS,
+  PARTICIPANT_EXPECTATIONS,
   PARTICIPATION_STEPS,
+  SUBMISSION_REQUIREMENTS,
   WHAT_WE_LOOK_FOR,
   RULES,
   EVALUATION_CRITERIA,
+  EVALUATION_INTRO,
+  EVALUATION_NOTES,
+  WHY_JOIN,
   PRIZES,
   HIRING_OPPORTUNITIES,
   ELIGIBILITY,
+  FORMAT_DETAILS,
   SUBMISSION_NOTES,
   CONTACT_EMAIL,
   COMPANY_WEBSITE,
@@ -37,7 +44,7 @@ const playfair = { fontFamily: "'Playfair Display', serif" };
 
 /** Small section label — uppercase tracking */
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-[10px] tracking-[0.2em] text-gray-400 uppercase mb-4 font-medium">
+  <h3 className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 sm:text-[11px]">
     {children}
   </h3>
 );
@@ -52,7 +59,7 @@ const SectionHeading = ({
 }) => (
   <h2
     id={id}
-    className="text-[1.75rem] sm:text-[2rem] leading-[1.15] font-normal text-black tracking-tight font-serif mb-6"
+    className="mb-6 text-[1.65rem] font-normal leading-[1.12] tracking-tight text-black font-serif sm:text-[1.95rem] lg:text-[2.2rem]"
     style={playfair}
   >
     {children}
@@ -79,6 +86,30 @@ const CircleIcon = ({
   </div>
 );
 
+const DetailCard = ({
+  icon,
+  title,
+  description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) => (
+  <div className="rounded-xl border border-gray-200 p-4 sm:p-5">
+    <div className="flex items-start gap-3 sm:gap-4">
+      <CircleIcon icon={icon} />
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-gray-900 sm:text-base">
+          {title}
+        </h3>
+        <p className="mt-1 text-xs font-medium leading-relaxed text-gray-500 sm:text-[13px]">
+          {description}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function HushhHackathonPage() {
@@ -90,28 +121,29 @@ export default function HushhHackathonPage() {
       <HushhTechBackHeader
         onBackClick={handleBack}
         rightType="hamburger"
+        className="px-4 sm:px-6 lg:px-8 max-w-6xl"
       />
 
-      <main className="px-6 flex-grow max-w-md mx-auto w-full pb-16">
+      <main className="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20">
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/*  HERO                                                         */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id={SECTION_IDS.hero} className="py-8">
+        <section id={SECTION_IDS.hero} className="max-w-2xl py-8 sm:py-10">
           <SectionLabel>Open Source · Hiring · {HERO_YEAR}</SectionLabel>
 
           <h1
-            className="text-[2.5rem] sm:text-[2.75rem] leading-[1.08] font-normal text-black tracking-tight font-serif"
+            className="text-[2.15rem] leading-[1.04] font-normal tracking-tight text-black font-serif sm:text-[2.75rem] lg:text-[3.35rem]"
             style={playfair}
           >
             {HERO_TITLE} <br />
             <span className="text-gray-400 italic font-light">{HERO_YEAR}</span>
           </h1>
 
-          <p className="mt-6 text-sm text-gray-600 leading-relaxed font-medium">
+          <p className="mt-5 max-w-xl text-sm font-medium leading-relaxed text-gray-600 sm:mt-6 sm:text-[0.95rem]">
             {HERO_SUBTITLE}
           </p>
 
-          <p className="mt-3 text-xs text-gray-500 leading-relaxed">
+          <p className="mt-3 max-w-xl text-xs leading-relaxed text-gray-500 sm:text-sm">
             {HERO_DESCRIPTION}
           </p>
         </section>
@@ -121,16 +153,16 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.window}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>Contribution Window</SectionLabel>
 
           {/* Date cards */}
           <div className="space-y-3">
             {/* Open window */}
-            <div className="flex items-center gap-4 py-4 border-b border-gray-100">
+            <div className="flex items-start gap-3 py-4 border-b border-gray-100 sm:gap-4">
               <CircleIcon icon="calendar_today" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
                   {CONTRIBUTION_START} – {CONTRIBUTION_END}
                 </p>
@@ -141,9 +173,9 @@ export default function HushhHackathonPage() {
             </div>
 
             {/* Post window */}
-            <div className="flex items-center gap-4 py-4">
+            <div className="flex items-start gap-3 py-4 sm:gap-4">
               <CircleIcon icon="event_available" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
                   Post {CONTRIBUTION_END}
                 </p>
@@ -163,20 +195,22 @@ export default function HushhHackathonPage() {
           id={SECTION_IDS.tracks}
           className="py-6 border-t border-gray-200"
         >
-          <SectionLabel>Project Tracks</SectionLabel>
-          <SectionHeading>
-            Choose Your <br />
-            <span className="text-gray-400 italic font-light">Track</span>
-          </SectionHeading>
+          <div className="max-w-2xl">
+            <SectionLabel>Project Tracks</SectionLabel>
+            <SectionHeading>
+              Choose Your <br />
+              <span className="text-gray-400 italic font-light">Track</span>
+            </SectionHeading>
+          </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-2">
             {PROJECT_TRACKS.map((track) => (
               <div
                 key={track.id}
-                className="border border-gray-200 rounded-xl p-5"
+                className="rounded-xl border border-gray-200 p-4 sm:p-5"
               >
                 {/* Track header */}
-                <div className="flex items-start gap-4 mb-4">
+                <div className="mb-4 flex items-start gap-3 sm:gap-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                     <span
                       className="material-symbols-outlined text-gray-700 text-xl"
@@ -185,7 +219,7 @@ export default function HushhHackathonPage() {
                       {track.icon}
                     </span>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-base font-semibold text-gray-900">
                       {track.name}
                     </h3>
@@ -206,12 +240,12 @@ export default function HushhHackathonPage() {
                     <button
                       key={link.label}
                       onClick={() => openExternal(link.url)}
-                      className="px-3 py-1.5 text-[11px] font-medium border border-gray-200 rounded-full text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2 text-left text-[11px] font-medium leading-relaxed text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 whitespace-normal"
                       aria-label={`Open ${link.label}`}
                       tabIndex={0}
                     >
-                      {link.label}
-                      <span className="material-symbols-outlined text-[11px] ml-1 align-middle">
+                      <span className="break-words">{link.label}</span>
+                      <span className="material-symbols-outlined shrink-0 text-[11px]">
                         open_in_new
                       </span>
                     </button>
@@ -223,11 +257,42 @@ export default function HushhHackathonPage() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
+        {/*  WHAT PARTICIPANTS HAVE TO DO                                 */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className="py-6 border-t border-gray-200">
+          <div className="max-w-2xl">
+            <SectionLabel>What Participants Have To Do</SectionLabel>
+            <SectionHeading>
+              Contribute With <br />
+              <span className="text-gray-400 italic font-light">Intent</span>
+            </SectionHeading>
+
+            <p className="mb-6 text-xs leading-relaxed text-gray-500 sm:text-sm">
+              This is an open-source contribution event. Participants are
+              expected to understand the codebase, solve a real problem, and
+              communicate their work clearly through a pull request and final
+              platform submission.
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            {PARTICIPANT_EXPECTATIONS.map((item) => (
+              <DetailCard
+                key={item.title}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
         {/*  HOW TO PARTICIPATE — Steps 1-8                               */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.steps}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>How To Participate</SectionLabel>
           <SectionHeading>
@@ -246,8 +311,8 @@ export default function HushhHackathonPage() {
                   {ps.step}
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-0.5 flex items-start gap-2 sm:items-center">
                     <h3 className="text-sm font-semibold text-gray-900">
                       {ps.title}
                     </h3>
@@ -270,20 +335,48 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/*  SUBMISSION NOTES                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="py-6 border-t border-gray-200">
-          <SectionLabel>Important Notes</SectionLabel>
+        <section className="max-w-2xl py-6 border-t border-gray-200">
+          <SectionLabel>Submission Checklist</SectionLabel>
+          <SectionHeading>
+            What To Submit <br />
+            <span className="text-gray-400 italic font-light">
+              On The Platform
+            </span>
+          </SectionHeading>
 
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-            {SUBMISSION_NOTES.map((note, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <span className="material-symbols-outlined text-hushh-blue text-sm mt-0.5 shrink-0">
-                  info
-                </span>
-                <p className="text-xs text-gray-600 leading-relaxed font-medium">
-                  {note}
-                </p>
-              </div>
+          <p className="mb-6 text-xs leading-relaxed text-gray-500 sm:text-sm">
+            Your final entry should help the reviewers understand what you
+            worked on, why it matters, and how they can evaluate it quickly.
+          </p>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {SUBMISSION_REQUIREMENTS.map((item) => (
+              <DetailCard
+                key={item.label}
+                icon={item.icon}
+                title={item.label}
+                description={item.description}
+              />
             ))}
+          </div>
+
+          <div className="mt-6 rounded-xl bg-gray-50 p-4 sm:p-5">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
+              Important Notes
+            </p>
+
+            <div className="space-y-3">
+              {SUBMISSION_NOTES.map((note, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-hushh-blue text-sm mt-0.5 shrink-0">
+                    info
+                  </span>
+                  <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                    {note}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -292,7 +385,7 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.lookFor}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>What We Look For</SectionLabel>
           <SectionHeading>
@@ -304,10 +397,10 @@ export default function HushhHackathonPage() {
             {WHAT_WE_LOOK_FOR.map((item) => (
               <div
                 key={item.label}
-                className="flex items-center gap-4 py-4 border-b border-gray-100 last:border-b-0"
+                className="flex items-start gap-3 py-4 border-b border-gray-100 last:border-b-0 sm:items-center sm:gap-4"
               >
                 <CircleIcon icon={item.icon} />
-                <p className="text-sm font-medium text-gray-800">
+                <p className="min-w-0 text-sm font-medium text-gray-800">
                   {item.label}
                 </p>
               </div>
@@ -320,7 +413,7 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.rules}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>Rules & Guidelines</SectionLabel>
           <SectionHeading>
@@ -347,7 +440,7 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.evaluation}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>Evaluation</SectionLabel>
           <SectionHeading>
@@ -355,11 +448,15 @@ export default function HushhHackathonPage() {
             <span className="text-gray-400 italic font-light">Evaluate</span>
           </SectionHeading>
 
+          <p className="mb-4 text-xs leading-relaxed text-gray-500 sm:text-sm">
+            {EVALUATION_INTRO}
+          </p>
+
           <div className="flex flex-wrap gap-2">
             {EVALUATION_CRITERIA.map((criterion) => (
               <span
                 key={criterion.label}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-gray-200 rounded-full text-gray-700 bg-white"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-2.5 text-xs font-medium leading-relaxed text-gray-700 sm:px-4"
               >
                 <span
                   className="material-symbols-outlined text-sm text-gray-500"
@@ -371,6 +468,45 @@ export default function HushhHackathonPage() {
               </span>
             ))}
           </div>
+
+          <div className="mt-6 space-y-3">
+            {EVALUATION_NOTES.map((note, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-hushh-blue text-sm mt-0.5 shrink-0">
+                  analytics
+                </span>
+                <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                  {note}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/*  WHY JOIN                                                     */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className="py-6 border-t border-gray-200">
+          <div className="max-w-2xl">
+            <SectionLabel>Why Join</SectionLabel>
+            <SectionHeading>
+              Build Real Work, <br />
+              <span className="text-gray-400 italic font-light">
+                Earn Real Visibility
+              </span>
+            </SectionHeading>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            {WHY_JOIN.map((item) => (
+              <DetailCard
+                key={item.title}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+              />
+            ))}
+          </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
@@ -380,19 +516,21 @@ export default function HushhHackathonPage() {
           id={SECTION_IDS.prizes}
           className="py-6 border-t border-gray-200"
         >
-          <SectionLabel>Prizes & Recognition</SectionLabel>
-          <SectionHeading>
-            Win Big, <br />
-            <span className="text-gray-400 italic font-light">
-              Build Bigger
-            </span>
-          </SectionHeading>
+          <div className="max-w-2xl">
+            <SectionLabel>Prizes & Recognition</SectionLabel>
+            <SectionHeading>
+              Win Big, <br />
+              <span className="text-gray-400 italic font-light">
+                Build Bigger
+              </span>
+            </SectionHeading>
+          </div>
 
-          <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {PRIZES.map((prize) => (
               <div
                 key={prize.position}
-                className={`flex items-center justify-between py-5 px-5 rounded-xl border ${
+                className={`flex flex-col items-start gap-3 rounded-xl border px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-5 ${
                   prize.highlight
                     ? "border-black bg-black text-white"
                     : "border-gray-200 bg-white text-gray-900"
@@ -409,7 +547,7 @@ export default function HushhHackathonPage() {
                   <span className="text-sm font-semibold">{prize.position}</span>
                 </div>
                 <span
-                  className="text-lg font-bold font-mono"
+                  className="text-lg font-bold font-mono sm:text-right"
                   style={playfair}
                 >
                   {prize.amount}
@@ -419,7 +557,7 @@ export default function HushhHackathonPage() {
           </div>
 
           {/* Extra recognition note */}
-          <div className="mt-4 flex items-start gap-3 py-3">
+          <div className="mt-4 flex max-w-2xl items-start gap-3 py-3">
             <span className="material-symbols-outlined text-hushh-blue text-sm mt-0.5 shrink-0">
               redeem
             </span>
@@ -438,25 +576,27 @@ export default function HushhHackathonPage() {
           id={SECTION_IDS.hiring}
           className="py-6 border-t border-gray-200"
         >
-          <SectionLabel>Career Opportunities</SectionLabel>
-          <SectionHeading>
-            From PR to <br />
-            <span className="text-gray-400 italic font-light">Career</span>
-          </SectionHeading>
+          <div className="max-w-2xl">
+            <SectionLabel>Career Opportunities</SectionLabel>
+            <SectionHeading>
+              From PR to <br />
+              <span className="text-gray-400 italic font-light">Career</span>
+            </SectionHeading>
+          </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-2">
             {HIRING_OPPORTUNITIES.map((opp) => (
               <div
                 key={opp.type}
-                className="border border-gray-200 rounded-xl p-5"
+                className="rounded-xl border border-gray-200 p-4 sm:p-5"
               >
                 {/* Header row */}
-                <div className="flex items-center gap-4 mb-4">
+                <div className="mb-4 flex items-start gap-3 sm:items-center sm:gap-4">
                   <CircleIcon
                     icon={opp.type === "internship" ? "school" : "work"}
                     size="w-12 h-12"
                   />
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-base font-semibold text-gray-900">
                       {opp.title}
                     </h3>
@@ -489,7 +629,7 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section
           id={SECTION_IDS.eligibility}
-          className="py-6 border-t border-gray-200"
+          className="max-w-2xl py-6 border-t border-gray-200"
         >
           <SectionLabel>Who Can Participate</SectionLabel>
           <SectionHeading>
@@ -501,7 +641,7 @@ export default function HushhHackathonPage() {
             {ELIGIBILITY.map((role) => (
               <span
                 key={role}
-                className="px-4 py-2.5 text-xs font-medium border border-gray-200 rounded-full text-gray-700 bg-white"
+                className="max-w-full rounded-full border border-gray-200 bg-white px-3 py-2.5 text-xs font-medium leading-relaxed text-gray-700 sm:px-4"
               >
                 {role}
               </span>
@@ -509,37 +649,31 @@ export default function HushhHackathonPage() {
           </div>
 
           {/* Format badges */}
-          <div className="mt-6 space-y-2">
-            <div className="flex items-center gap-3 py-3 border-b border-gray-100">
-              <CircleIcon icon="language" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Online</p>
-                <p className="text-xs text-gray-500 font-medium">
-                  Participate from anywhere
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 py-3 border-b border-gray-100">
-              <CircleIcon icon="group" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Individual or Team
-                </p>
-                <p className="text-xs text-gray-500 font-medium">
-                  1 to 2 members per team
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 py-3">
-              <CircleIcon icon="description" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  GitHub PR + Write-up
-                </p>
-                <p className="text-xs text-gray-500 font-medium">
-                  Submission format
-                </p>
-              </div>
+          <div className="mt-6">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
+              Format
+            </p>
+            <div className="space-y-2">
+              {FORMAT_DETAILS.map((detail, index) => (
+                <div
+                  key={detail.title}
+                  className={`flex items-start gap-3 py-3 sm:items-center ${
+                    index < FORMAT_DETAILS.length - 1
+                      ? "border-b border-gray-100"
+                      : ""
+                  }`}
+                >
+                  <CircleIcon icon={detail.icon} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {detail.title}
+                    </p>
+                    <p className="text-xs text-gray-500 font-medium">
+                      {detail.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -551,27 +685,31 @@ export default function HushhHackathonPage() {
           id={SECTION_IDS.contact}
           className="py-6 border-t border-gray-200"
         >
-          <SectionLabel>Contact</SectionLabel>
-
-          <div className="flex items-center gap-4 py-4 border-b border-gray-100">
-            <CircleIcon icon="mail" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {CONTACT_EMAIL}
-              </p>
-              <p className="text-xs text-gray-500 font-medium">
-                For queries and contribution-related questions
-              </p>
-            </div>
+          <div className="max-w-2xl">
+            <SectionLabel>Contact</SectionLabel>
           </div>
 
-          <div className="flex items-center gap-4 py-4">
-            <CircleIcon icon="public" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">hushh.ai</p>
-              <p className="text-xs text-gray-500 font-medium">
-                Company website
-              </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-start gap-3 py-4 border-b border-gray-100 md:border md:rounded-xl md:border-gray-200 md:px-4 md:py-5">
+              <CircleIcon icon="mail" />
+              <div className="min-w-0">
+                <p className="break-words text-sm font-semibold text-gray-900">
+                  {CONTACT_EMAIL}
+                </p>
+                <p className="text-xs text-gray-500 font-medium">
+                  For queries and contribution-related questions
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 py-4 md:border md:rounded-xl md:border-gray-200 md:px-4 md:py-5">
+              <CircleIcon icon="public" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900">hushh.ai</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  Company website
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -579,7 +717,7 @@ export default function HushhHackathonPage() {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/*  CTAs                                                         */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="py-8 space-y-3">
+        <section className="max-w-2xl py-8 space-y-3">
           <HushhTechCta
             variant={HushhTechCtaVariant.BLACK}
             onClick={() =>
@@ -596,6 +734,16 @@ export default function HushhHackathonPage() {
 
           <HushhTechCta
             variant={HushhTechCtaVariant.WHITE}
+            onClick={() => openExternal(UNSTOP_EVENT_URL)}
+          >
+            Register on Unstop
+            <span className="material-symbols-outlined text-base">
+              open_in_new
+            </span>
+          </HushhTechCta>
+
+          <HushhTechCta
+            variant={HushhTechCtaVariant.WHITE}
             onClick={() => openExternal(COMPANY_WEBSITE)}
           >
             Visit hushh.ai
@@ -606,7 +754,7 @@ export default function HushhHackathonPage() {
         {/*  TRUST BADGES                                                 */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section className="flex flex-col items-center justify-center text-center gap-2 pb-8">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
             <div className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[12px] text-hushh-blue">
                 lock
@@ -615,7 +763,7 @@ export default function HushhHackathonPage() {
                 Authentication Required
               </span>
             </div>
-            <span className="text-gray-300">·</span>
+            <span className="hidden text-gray-300 sm:block">·</span>
             <div className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[12px] text-hushh-blue">
                 verified
