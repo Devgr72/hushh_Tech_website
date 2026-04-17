@@ -1130,3 +1130,69 @@ export function buildMetricsReportEmail(summary) {
     text,
   };
 }
+
+const RPC_ALLOWED_WINDOWS = new Set([7, 30, 90, 0]);
+
+export function parseWindowDays(rawWindow) {
+  const parsed = Number.parseInt(String(rawWindow ?? "7"), 10);
+  return RPC_ALLOWED_WINDOWS.has(parsed) ? parsed : 7;
+}
+
+export function createMetricsClient() {
+  const supabaseUrl =
+    trimEnvValue(process.env.SUPABASE_URL) ||
+    trimEnvValue(process.env.VITE_SUPABASE_URL);
+  const serviceRoleKey = trimEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    const error = new Error("Server configuration error");
+    error.statusCode = 500;
+    error.payload = {
+      error: "Server configuration error",
+      hint:
+        "Set SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY",
+    };
+    throw error;
+  }
+
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey);
+}
+
+export async function fetchMetricsSummaryData(rawWindowDays) {
+  const windowDays = parseWindowDays(rawWindowDays);
+  const supabase = createMetricsClient();
+  const { data, error } = await supabase.rpc("get_metrics_summary", {
+    window_days: windowDays,
+  });
+
+  if (error) {
+    const rpcError = new Error(error.message || "Failed to fetch metrics");
+    rpcError.statusCode = 500;
+    rpcError.payload = {
+      error: "Failed to fetch metrics",
+      detail: error.message,
+    };
+    throw rpcError;
+  }
+
+  return {
+    data,
+    windowDays,
+  };
+}
+
+export function buildMetricsApiPayload(
+  data,
+  windowDays,
+  source = "supabase"
+) {
+  return {
+    success: true,
+    data,
+    meta: {
+      window_days: windowDays,
+      fetched_at: new Date().toISOString(),
+      source,
+    },
+  };
+}

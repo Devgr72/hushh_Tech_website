@@ -86,8 +86,10 @@ app.all('/api/gemini-ephemeral-token', async (req, res) => wrapHandler(await loa
 app.all('/api/generate-investor-profile', async (req, res) => wrapHandler(await loadApi('generate-investor-profile'))(req, res));
 app.all('/api/delete-account', async (req, res) => wrapHandler(await loadApi('delete-account'))(req, res));
 app.all('/api/analytics/realtime', async (req, res) => wrapHandler(await loadApi('analytics/realtime'))(req, res));
+app.all(['/api/metrics', '/api/metrics/'], async (req, res) => wrapHandler(await loadApi('metrics'))(req, res));
 app.all('/api/metrics/summary', async (req, res) => wrapHandler(await loadApi('metrics/summary'))(req, res));
 app.all('/api/metrics/send-report', async (req, res) => wrapHandler(await loadApi('metrics/send-report'))(req, res));
+app.all('/api/metrics/stream', async (req, res) => wrapHandler(await loadApi('metrics/stream'))(req, res));
 app.all('/api/public-investor-profile', async (req, res) => wrapHandler(await loadApi('public-investor-profile'))(req, res));
 app.all('/api/send-email-notification', async (req, res) => wrapHandler(await loadApi('send-email-notification'))(req, res));
 app.all('/api/wallet-pass', async (req, res) => wrapHandler(await loadApi('wallet-pass'))(req, res));
@@ -129,6 +131,7 @@ app.use(express.static(DIST_DIR, {
 // No-cache pages (auth, profile, onboarding, etc.)
 const NO_CACHE_PATHS = [
   '/login', '/signup', '/onboarding', '/hushh-user-profile',
+  '/discover-fund-a', '/profile', '/community', '/delete-account', '/sign-nda', '/metric', '/metrics',
   '/discover-fund-a', '/profile', '/community', '/delete-account', '/sign-nda', '/metric', '/metrics',
 ];
 

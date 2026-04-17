@@ -58,9 +58,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Forward API calls to the serverless host in dev (vercel dev runs on 3000 by default)
+      // Forward API calls to the repo-local API host in dev (`npm run dev:api`).
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.HUSHH_API_PROXY_TARGET || 'http://127.0.0.1:3000',
         changeOrigin: true,
       },
     },

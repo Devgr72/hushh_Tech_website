@@ -1,184 +1,114 @@
 /**
- * Shared TypeScript interfaces for the Hushh KPI dashboard.
- * The primary funnel comes from Supabase; traffic context is server-side GA4.
+ * TypeScript interfaces for the public KPI metrics dashboard.
+ * All data sourced from Supabase via /api/metrics/summary.
  */
 
-/* ── Reporting window ── */
-export interface WindowPayload {
+/* ── Window ── */
+export interface MetricsWindow {
   days: number;
-  startDate: string;
-  endDate: string;
-  dates?: string[];
+  start: string;
+  end: string;
 }
 
-/* ── Business funnel daily series ── */
-export interface BusinessSeriesRow {
+/* ── Core KPI counts ── */
+export interface KpiCounts {
+  raw_signups: number;
+  persisted_users: number;
+  onboarding_started: number;
+  onboarding_completed: number;
+  profiles_created: number;
+  profiles_confirmed: number;
+}
+
+/* ── Conversion rates (percentages) ── */
+export interface ConversionRates {
+  signup_to_persisted: number;
+  signup_to_onboarding: number;
+  onboarding_completion: number;
+  profile_confirmation: number;
+}
+
+/* ── Funnel stage ── */
+export interface FunnelStage {
+  stage: string;
+  count: number;
+}
+
+/* ── Onboarding step distribution ── */
+export interface StepDistributionEntry {
+  step: number;
+  count: number;
+  is_completed: boolean;
+}
+
+/* ── Daily breakdown row ── */
+export interface DailyRow {
   date: string;
   signups: number;
-  persistedUsers: number;
-  onboardingStarted: number;
-  onboardingCompleted: number;
-  profilesCreated: number;
-  profilesConfirmed: number;
+  persisted: number;
+  onboarding_started: number;
+  onboarding_completed: number;
+  profiles_created: number;
+  profiles_confirmed: number;
 }
 
-/* ── Business funnel overview ── */
-export interface BusinessOverview {
-  signups: number;
-  persistedUsers: number;
-  onboardingStarted: number;
-  onboardingCompleted: number;
-  profilesCreated: number;
-  profilesConfirmed: number;
+/* ── Audit / data freshness ── */
+export interface AuditInfo {
+  latest_signup: string | null;
+  latest_persisted: string | null;
+  latest_onboarding: string | null;
+  latest_profile: string | null;
+  query_executed_at: string;
 }
 
-/* ── Conversion rates ── */
-export interface ConversionRates {
-  signupToPersistedUsers: number | null;
-  signupToOnboardingStarted: number | null;
-  onboardingCompletionRate: number | null;
-  profileConfirmationRate: number | null;
+/* ── Complete metrics response from RPC ── */
+export interface MetricsSummary {
+  window: MetricsWindow;
+  kpi: KpiCounts;
+  totals: KpiCounts;
+  conversions: ConversionRates;
+  funnel: FunnelStage[];
+  step_distribution: StepDistributionEntry[];
+  daily: DailyRow[];
+  audit: AuditInfo;
 }
 
-/* ── Onboarding step breakdown ── */
-export interface OnboardingStep {
-  step: string;
-  users: number;
-}
-
-/* ── KYC metrics ── */
-export interface KycOverview {
-  total: number;
-  incomplete: number;
-  pending: number;
-  verified: number;
-  plaidConnected: number;
-  paymentCompleted: number;
-}
-
-/* ── NDA metrics ── */
-export interface NdaOverview {
-  totalSigned: number;
-}
-
-/* ── Identity verification metrics ── */
-export interface IdentityOverview {
-  total: number;
-  pending: number;
-  verified: number;
-  failed: number;
-  documentVerified: number;
-  selfieVerified: number;
-}
-
-/* ── CEO meeting payment metrics ── */
-export interface CeoMeetingOverview {
-  total: number;
-  completed: number;
-  pending: number;
-  totalRevenueCents: number;
-  calendlyBooked: number;
-}
-
-/* ── Community metrics ── */
-export interface CommunityOverview {
-  totalRegistrations: number;
-}
-
-/* ── Product usage metrics ── */
-export interface ProductUsageItem {
-  productName: string;
-  totalUsage: number;
-  uniqueUsers: number;
-}
-
-/* ── Device/platform metrics ── */
-export interface DeviceOverview {
-  total: number;
-  active: number;
-  byPlatform: Record<string, number>;
-}
-
-/* ── Delete request metrics ── */
-export interface DeleteRequestOverview {
-  total: number;
-  pending: number;
-  completed: number;
-}
-
-/* ── Notification metrics ── */
-export interface NotificationOverview {
-  total: number;
-  byChannel: Record<string, number>;
-  byStatus: Record<string, number>;
-}
-
-/* ── Full summary payload ── */
-export interface SummaryPayload {
-  generatedAt: string;
-  timezone: string;
-  window: WindowPayload;
-
-  businessFunnel: {
+/* ── API response wrapper ── */
+export interface MetricsApiResponse {
+  success: boolean;
+  data: MetricsSummary;
+  meta: {
+    window_days: number;
+    fetched_at: string;
     source: string;
-    overview: BusinessOverview;
-    conversionRates: ConversionRates;
-    onboardingStepBreakdown: OnboardingStep[];
-    series: BusinessSeriesRow[];
   };
-
-  kyc?: KycOverview;
-  nda?: NdaOverview;
-  identity?: IdentityOverview;
-  ceoMeetings?: CeoMeetingOverview;
-  community?: CommunityOverview;
-  productUsage?: ProductUsageItem[];
-  devices?: DeviceOverview;
-  deleteRequests?: DeleteRequestOverview;
-  notifications?: NotificationOverview;
-
-  traffic: {
-    source: string;
-    available: boolean;
-    overview: {
-      active1DayUsers: number;
-      active7DayUsers: number;
-      active28DayUsers: number;
-      sessions: number;
-      engagedSessions: number;
-      screenPageViews: number;
-      newUsers: number;
-      engagementRate: number | null;
-      averageSessionDuration: number | null;
-      realtimeActiveUsers: number | null;
-    };
-    series: Array<{
-      date: string;
-      activeUsers: number;
-      sessions: number;
-      screenPageViews: number;
-      engagedSessions: number;
-      newUsers: number;
-    }>;
-    note?: string;
-    lookerStudioReportUrl?: string;
-  };
-
-  legacy: {
-    source: string;
-    available: boolean;
-    overview: { usersCreated: number };
-    series: Array<{ date: string; usersCreated: number }>;
-    note?: string;
-  };
-
-  dataQualityWarnings: string[];
-  stale?: boolean;
 }
 
-/* ── Component-level state ── */
-export interface SummaryState {
-  data: SummaryPayload | null;
+/* ── Dashboard state ── */
+export type DashboardStatus = "loading" | "success" | "error" | "stale";
+
+export interface DashboardState {
+  status: DashboardStatus;
+  data: MetricsSummary | null;
   error: string | null;
-  isLoading: boolean;
+  lastFetched: string | null;
+  windowDays: number;
+}
+
+/* ── KPI card display config ── */
+export interface KpiCardConfig {
+  label: string;
+  key: keyof KpiCounts;
+  icon: string;
+  color: string;
+  description: string;
+}
+
+/* ── Conversion card display config ── */
+export interface ConversionCardConfig {
+  label: string;
+  key: keyof ConversionRates;
+  fromLabel: string;
+  toLabel: string;
+  color: string;
 }

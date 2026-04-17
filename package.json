@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "PORT=3005 node server.js",
-    "dev:vercel": "vercel dev --listen 3000",
+    "dev:api": "node scripts/dev-api.mjs",
+    "dev:vercel": "npm run dev:api",
     "security:gitleaks": "bash scripts/security/run-gitleaks.sh",
     "security:audit": "bash scripts/security/open-source-audit.sh",
     "security:pre-commit": "PRE_COMMIT_HOME=.pre-commit-cache pre-commit run --all-files",
@@ -17,6 +17,7 @@
     "build": "vitest run && vite build && node scripts/generate-sitemap.js && node scripts/generate-robots.js",
     "preview": "vite preview",
     "test:e2e": "npx playwright test",
+    "test:e2e:metrics": "npx playwright test tests/e2e/metrics.spec.ts",
     "test:e2e:deepsearch": "npx playwright test deepsearch",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:headed": "npx playwright test --headed",

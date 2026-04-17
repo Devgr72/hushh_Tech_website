@@ -1,25 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const buildMetricsSummary = vi.fn();
-const clampWindowDays = vi.fn((value) => Number.parseInt(String(value || 7), 10));
-
-vi.mock("../api/metrics/service.js", () => ({
-  buildMetricsSummary,
-  clampWindowDays,
+const rpcMock = vi.fn();
+const createClientMock = vi.fn(() => ({
+  rpc: rpcMock,
 }));
 
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: (...args) => createClientMock(...args),
+}));
+
+import metricsSummaryHandler from "../api/metrics/summary.js";
+
 const createResponse = () => {
-  const headers = new Map();
   let statusCode = 200;
   let body;
+  const headers = new Map();
 
   return {
-    headers,
     get statusCode() {
       return statusCode;
     },
     get body() {
       return body;
+    },
+    get headers() {
+      return headers;
+    },
+    setHeader(key, value) {
+      headers.set(key, value);
+      return this;
     },
     status(code) {
       statusCode = code;
@@ -29,85 +38,78 @@ const createResponse = () => {
       body = payload;
       return this;
     },
-    setHeader(name, value) {
-      headers.set(name, value);
+    end() {
+      return this;
     },
   };
 };
 
-describe("metrics summary route", () => {
+describe("metrics summary API route", () => {
+  const originalEnv = { ...process.env };
+
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
-    vi.resetModules();
+    process.env = { ...originalEnv };
+    delete process.env.SUPABASE_URL;
+    delete process.env.VITE_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   });
 
-  it("returns the summary payload", async () => {
-    buildMetricsSummary.mockResolvedValue({
-      generatedAt: "2026-04-15T00:00:00.000Z",
-      timezone: "America/Los_Angeles",
-      window: {
-        days: 7,
-        startDate: "2026-04-09",
-        endDate: "2026-04-15",
-      },
-      businessFunnel: {
-        overview: {
-          signups: 4,
-          persistedUsers: 4,
-          onboardingStarted: 1,
-          onboardingCompleted: 1,
-          profilesCreated: 1,
-          profilesConfirmed: 1,
-        },
-        conversionRates: {},
-        onboardingStepBreakdown: [],
-        series: [],
-      },
-      traffic: {
-        available: true,
-        overview: {},
-        series: [],
-      },
-      legacy: {
-        available: true,
-        overview: { usersCreated: 0 },
-        series: [],
-      },
-      dataQualityWarnings: [],
-    });
-
-    const { default: handler } = await import("../api/metrics/summary.js");
-    const req = {
-      method: "GET",
-      query: {
-        window_days: "7",
-      },
-    };
+  it("rejects non-GET requests", async () => {
     const res = createResponse();
 
-    await handler(req, res);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(res.body.window.endDate).toBe("2026-04-15");
-    expect(clampWindowDays).toHaveBeenCalledWith("7");
-    expect(buildMetricsSummary).toHaveBeenCalledWith({
-      windowDays: 7,
-    });
-  });
-
-  it("rejects non-GET methods", async () => {
-    const { default: handler } = await import("../api/metrics/summary.js");
-    const req = { method: "POST", query: {} };
-    const res = createResponse();
-
-    await handler(req, res);
+    await metricsSummaryHandler({ method: "POST", query: {} }, res);
 
     expect(res.statusCode).toBe(405);
-    expect(res.body).toEqual({ error: "Method not allowed" });
+    expect(res.body).toEqual({ error: "Method not allowed. Use GET." });
+  });
+
+  it("uses SUPABASE_URL when the server env is present", async () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    rpcMock.mockResolvedValue({
+      data: { kpi: { raw_signups: 30 } },
+      error: null,
+    });
+
+    const res = createResponse();
+    await metricsSummaryHandler(
+      { method: "GET", query: { window_days: "7" } },
+      res
+    );
+
+    expect(createClientMock).toHaveBeenCalledWith(
+      "https://example.supabase.co",
+      "service-role",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+    expect(rpcMock).toHaveBeenCalledWith("get_metrics_summary", {
+      window_days: 7,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: { kpi: { raw_signups: 30 } },
+    });
+  });
+
+  it("fails closed when Supabase env is missing", async () => {
+    const res = createResponse();
+
+    await metricsSummaryHandler(
+      { method: "GET", query: { window_days: "7" } },
+      res
+    );
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({
+      error: "Server configuration error",
+      hint: "Set SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY",
+    });
   });
 });

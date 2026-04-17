@@ -74,6 +74,7 @@ import GlobalNDAGate from './components/GlobalNDAGate';
 import SignNDAPage from './pages/sign-nda';
 import DocumentViewerPage from './pages/document-viewer';
 import NDAAdminPage from './pages/nda-admin';
+import MetricsDashboard from './pages/metrics';
 import { AuthSessionProvider, useAuthSession } from './auth/AuthSessionProvider';
 import AuthRequiredRoute from './components/AuthRequiredRoute';
 import HushhHackathonPage from './pages/hushh-hackathon/ui';
@@ -107,7 +108,7 @@ const ContentWrapper = ({ children }: { children: ReactNode }) => {
   const isSignup = location.pathname.toLowerCase() === '/signup';
   const isProfile = location.pathname === '/profile';
   const isHushhHackathon = location.pathname === '/hushh-hackathon';
-  const isMetrics = location.pathname === '/metrics' || location.pathname === '/metric';
+  const isMetrics = location.pathname.startsWith('/metric');
 
   return (
     <div className={`${isHomePage || isAuthCallback || isUserRegistration || isOnboarding || isKycFlow || isKycDemo || isA2APlayground || isInvestorGuide || isHushhAI || isKai || isStudio || isHushhUserProfile || isSignNda || isDocumentViewer || isInvestorProfile || isPublicInvestorProfile || isDiscoverFundA || isCommunity || isDeleteAccount || isLogin || isSignup || isProfile || isHushhHackathon || isMetrics ? '' : 'mt-20'}`}>
@@ -140,7 +141,7 @@ const useLayoutVisibility = () => {
   const isA2APlayground = location.pathname.startsWith('/a2a-playground');
   const isPublicInvestorProfile = location.pathname.startsWith('/investor/');
   const isHushhHackathon = location.pathname === '/hushh-hackathon';
-  const isMetrics = location.pathname === '/metrics' || location.pathname === '/metric';
+  const isMetrics = location.pathname.startsWith('/metric');
   const hideOld = isHushhAI || isKai || isStudio || isHomePage || isOnboarding || isProfile || isFundA || isCommunity || isDeleteAccount || isLogin || isSignup || isSignNda || isDocumentViewer || isHushhUserProfile || isKycFlow || isKycDemo || isA2APlayground || isPublicInvestorProfile || isHushhHackathon || isMetrics;
   return {
     showNavbar: !hideOld,
@@ -382,6 +383,9 @@ function App() {
             <Route path='/document-viewer' element={<DocumentViewerPage />} />
             {/* NDA Admin Page - Password protected view of all NDA agreements */}
             <Route path='/nda-admin' element={<NDAAdminPage />} />
+            {/* Public KPI Dashboard — Supabase-powered, no auth required */}
+            <Route path='/metrics' element={<MetricsDashboard />} />
+            <Route path='/metric' element={<Navigate to="/metrics" replace />} />
           </Routes>
         </ContentWrapper>
         {showFooter && <Footer />}

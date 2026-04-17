@@ -231,6 +231,11 @@ describe('isPublicRoute', () => {
     expect(isPublicRoute('/hushh-ai/chat')).toBe(true);
   });
 
+  it('should return true for metrics routes', () => {
+    expect(isPublicRoute('/metrics')).toBe(true);
+    expect(isPublicRoute('/metric')).toBe(true);
+  });
+
   // Test 6: Protected onboarding routes are NOT public
   it('should return false for protected onboarding routes', () => {
     expect(isPublicRoute('/onboarding')).toBe(false);
