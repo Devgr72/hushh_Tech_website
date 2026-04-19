@@ -1,5 +1,12 @@
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
+import {
+  applyCors,
+  checkRateLimit,
+  requireMethod,
+  stripSecretsFromError,
+} from "./shared/security.js";
+
 const REQUIRED_FIELDS = [
   "name",
   "email",
@@ -156,8 +163,17 @@ function normalizeBudget(budgetPerNight) {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== "POST") {
-    return response.status(405).json({ error: "Method not allowed" });
+  if (applyCors(request, response)) return;
+  if (requireMethod(request, response, ["POST"])) return;
+
+  const rl = checkRateLimit(request, {
+    key: "enrich-prefs",
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    response.setHeader("Retry-After", String(rl.retryAfterSec));
+    return response.status(429).json({ error: "Too many requests" });
   }
 
   try {
@@ -249,8 +265,7 @@ Rules:
 
     return response.status(200).json({ preferences: parsed });
   } catch (error) {
-    console.error("Enrichment handler failed:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return response.status(500).json({ error: message });
+    console.error("[enrich-preferences] error:", error);
+    return response.status(500).json({ error: stripSecretsFromError(error) });
   }
 }
