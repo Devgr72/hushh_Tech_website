@@ -14,5 +14,6 @@ paths = [
   '''^src/components/images/''',
   '''^\.planning/''',
   '''^supabase/\.temp/''',
-  '''^\.env\.local\.example$'''
+  '''^\.env\.local\.example$''',
+  '''tests/apiSecurity\.test\.ts$'''
 ]
