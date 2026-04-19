@@ -4,12 +4,12 @@
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+import {
+  applyCors,
+  checkRateLimit,
+  requireMethod,
+  stripSecretsFromError,
+} from './shared/security.js';
 
 function createSupabaseAdminClient() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
@@ -52,13 +52,17 @@ async function resolvePublicProfileOwner(slug) {
 }
 
 export default async function handler(req, res) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).json({ ok: true });
-  }
+  if (applyCors(req, res)) return;
+  if (requireMethod(req, res, ['POST'])) return;
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const rl = checkRateLimit(req, {
+    key: 'email-notify',
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests' });
   }
 
   try {
@@ -186,10 +190,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, emailSent: true });
   } catch (error) {
-    console.error('Email error:', error);
-    return res.status(500).json({ 
-      error: error.message || 'Failed to send email',
-      details: error.toString()
-    });
+    console.error('[send-email-notification] error:', error);
+    return res.status(500).json({ error: stripSecretsFromError(error) });
   }
 }
