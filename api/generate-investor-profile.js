@@ -3,6 +3,13 @@
  * This runs server-side to avoid CORS issues and keep API keys secure
  */
 
+import {
+  applyCors,
+  checkRateLimit,
+  requireMethod,
+  stripSecretsFromError,
+} from "./shared/security.js";
+
 const SYSTEM_PROMPT = `You are an assistant that PRE-FILLS an INVESTOR PROFILE from minimal information.
 
 You are given:
@@ -100,24 +107,17 @@ const PROFILE_SCHEMA = {
 };
 
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
+  if (applyCors(req, res)) return;
+  if (requireMethod(req, res, ['POST'])) return;
 
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  const rl = checkRateLimit(req, {
+    key: 'investor-profile',
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests' });
   }
 
   try {
@@ -215,9 +215,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error generating investor profile:', error);
-    return res.status(500).json({ 
-      error: error.message || 'Failed to generate investor profile' 
-    });
+    console.error('[generate-investor-profile] error:', error);
+    return res.status(500).json({ error: stripSecretsFromError(error) });
   }
 }
