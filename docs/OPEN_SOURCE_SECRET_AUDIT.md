@@ -59,3 +59,23 @@ These values are intentionally public client config when used correctly:
 3. Run `npm run security:audit`.
 4. Rewrite git history with `npm run security:rewrite-history`.
 5. Force-push the rewritten repo and have collaborators re-clone.
+
+## Endpoint-Level Hardening
+
+Server-side secret storage is necessary but not sufficient. Serverless endpoints that call vendor APIs using server-held credentials must also enforce:
+
+- Origin allowlist (rejects third-party browser callers)
+- Method guard (405 on anything but the expected verb)
+- Per-IP rate limit (caps abuse and vendor credit burn)
+- Error redaction (no env var names, bearer tokens, or provider keys echoed back)
+
+These are implemented in `api/shared/security.js` and applied to:
+
+- `api/generate-investor-profile.js` (OpenAI GPT-4o)
+- `api/enrich-preferences.js` (OpenAI chat completions)
+- `api/send-email-notification.js` (Gmail SMTP)
+
+`api/gemini-ephemeral-token.js` is rearchitected separately on the broker track.
+`api/google-wallet-pass.js` uses its own `GOOGLE_WALLET_ALLOWED_ORIGINS` allowlist and is unchanged.
+
+The per-instance rate limiter is best-effort. For durable cross-instance rate limiting, see the existing `hushh_ai_rate_limits` Supabase table referenced in `api/delete-account-service.js`.
