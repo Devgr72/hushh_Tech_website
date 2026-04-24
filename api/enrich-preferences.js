@@ -163,7 +163,9 @@ function normalizeBudget(budgetPerNight) {
 }
 
 export default async function handler(request, response) {
-  if (applyCors(request, response)) return;
+  const cors = applyCors(request, response, ['POST']);
+  if (cors.done) return;
+
   if (requireMethod(request, response, ["POST"])) return;
 
   const rl = checkRateLimit(request, {

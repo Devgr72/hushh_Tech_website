@@ -107,7 +107,9 @@ const PROFILE_SCHEMA = {
 };
 
 export default async function handler(req, res) {
-  if (applyCors(req, res)) return;
+  const cors = applyCors(req, res, ['POST']);
+  if (cors.done) return;
+
   if (requireMethod(req, res, ['POST'])) return;
 
   const rl = checkRateLimit(req, {
